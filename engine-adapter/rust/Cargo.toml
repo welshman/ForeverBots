@@ -1,0 +1,17 @@
+[package]
+name = "foreverbots-wasm"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+forever-engine = { git = "https://github.com/sage3648/mythicsim-forever-engine.git", branch = "main" }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+wasm-bindgen = "0.2"
+
+[profile.release]
+lto = true
+codegen-units = 1

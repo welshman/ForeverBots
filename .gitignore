@@ -1,0 +1,9 @@
+node_modules/
+frontend/dist/
+engine-adapter/rust/target/
+engine-adapter/wasm/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
