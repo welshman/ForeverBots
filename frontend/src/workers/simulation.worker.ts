@@ -10,14 +10,20 @@ type WasmModule = {
   simulate_prepared_json: (json: string) => string;
 };
 
+interface WorkerGlobal {
+  postMessage: (message: unknown) => void;
+  onmessage: ((event: MessageEvent) => void) | null;
+}
+
+const workerSelf = self as unknown as WorkerGlobal;
 let wasmMod: WasmModule | null = null;
 
 function postProgress(payload: SimulationProgress) {
-  self.postMessage({ type: "progress", payload });
+  workerSelf.postMessage({ type: "progress", payload });
 }
 
 function postResult(payload: SimulationResult) {
-  self.postMessage({ type: "result", payload });
+  workerSelf.postMessage({ type: "result", payload });
 }
 
 async function loadWasm(): Promise<WasmModule> {
@@ -28,7 +34,7 @@ async function loadWasm(): Promise<WasmModule> {
   return mod;
 }
 
-self.onmessage = async (event: MessageEvent) => {
+workerSelf.onmessage = async (event: MessageEvent) => {
   if (event.data?.type !== "run") return;
   const req = event.data.payload as SimulationRequest;
   const started = performance.now();

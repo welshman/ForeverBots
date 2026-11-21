@@ -1,0 +1,10 @@
+# WoW Forever Frost Mage Sample Profile
+mage="Arcaneweave"
+level=60
+race=gnome
+spec=frost
+role=spell
+talents=2300050310030000000000000000000000020535023102351301
+head=netherwind_crown,id=16914,enchant_id=2544
+neck=choker_of_the_fire_lord,id=18814
+main_hand=staff_of_the_shadow_flame,id=19356,enchant_id=2504
