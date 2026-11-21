@@ -1,0 +1,81 @@
+name: Engine verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout ForeverBots
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned engine for its native tests
+        uses: actions/checkout@v4
+        with:
+          repository: sage3648/mythicsim-forever-engine
+          ref: 375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f
+          path: engine-source
+          persist-credentials: false
+      - name: Install matching Rust toolchain
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+          rustup target add wasm32-unknown-unknown --toolchain 1.99.1
+      - name: Install Node for WASM smoke tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate adapter dependency lockfile
+        run: cargo generate-lockfile --manifest-path engine-adapter/rust/Cargo.toml
+      - name: Check adapter formatting
+        run: cargo fmt --manifest-path engine-adapter/rust/Cargo.toml -- --check
+      - name: Lint adapter
+        run: cargo clippy --locked --manifest-path engine-adapter/rust/Cargo.toml --all-targets -- -D warnings
+      - name: Test adapter natively
+        run: cargo test --locked --manifest-path engine-adapter/rust/Cargo.toml
+      - name: Test pinned upstream engine natively
+        run: cargo test --locked --manifest-path engine-source/Cargo.toml
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.13.1 --locked
+      - name: Build browser WASM
+        working-directory: engine-adapter/rust
+        env:
+          RUSTFLAGS: '-C link-arg=--max-memory=268435456'
+        run: wasm-pack build --target web --release --locked --out-dir ../../artifacts/wasm-web
+      - name: Build Node WASM for initialization smoke tests
+        working-directory: engine-adapter/rust
+        env:
+          RUSTFLAGS: '-C link-arg=--max-memory=268435456'
+        run: wasm-pack build --target nodejs --release --locked --out-dir ../../artifacts/wasm-node
+      - name: Exercise actual WASM initialization and input rejection
+        run: node scripts/wasm-smoke.cjs
+      - name: Record raw and gzip WASM sizes
+        run: |
+          python3 - <<'PY'
+          import gzip, hashlib, json, pathlib
+          p = pathlib.Path('artifacts/wasm-web/foreverbots_wasm_bg.wasm')
+          b = p.read_bytes()
+          result = {'wasm_bytes': len(b), 'gzip_bytes': len(gzip.compress(b, mtime=0)), 'sha256': hashlib.sha256(b).hexdigest(), 'note': 'No simulation performance or browser parity claim.'}
+          pathlib.Path('artifacts/measurements.json').write_text(json.dumps(result, indent=2) + '\n')
+          PY
+      - name: Collect dependency lockfile
+        if: always()
+        run: |
+          mkdir -p artifacts
+          if test -f engine-adapter/rust/Cargo.lock; then cp engine-adapter/rust/Cargo.lock artifacts/Cargo.lock; fi
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-verification
+          path: artifacts/
+          retention-days: 14
+          if-no-files-found: warn
