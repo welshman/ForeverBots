@@ -40,7 +40,6 @@ jobs:
           OLD="${{ steps.check.outputs.current }}"
           NEW="${{ steps.check.outputs.latest }}"
           sed -i "s/${OLD}/${NEW}/g" engine-adapter/rust/Cargo.toml
-          sed -i "s/${OLD}/${NEW}/g" .github/workflows/engine-verification.yml
           sed -i "s/${OLD}/${NEW}/g" README.md
 
       - name: Install Rust toolchain to verify new engine builds
@@ -65,7 +64,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add engine-adapter/rust/Cargo.toml .github/workflows/engine-verification.yml README.md
+          git add engine-adapter/rust/Cargo.toml README.md
           SHORT_REV=$(echo "${{ steps.check.outputs.latest }}" | cut -c1-7)
           git commit -m "chore(engine): update mythicsim-forever-engine to ${SHORT_REV}"
           git push origin main
