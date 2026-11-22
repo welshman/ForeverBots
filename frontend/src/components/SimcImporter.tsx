@@ -69,18 +69,28 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+    <div className="space-y-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5">
+      <div className="rounded-lg border border-gold-500/40 bg-gold-500/10 px-3.5 py-2.5 text-xs text-slate-700 dark:text-gold-300">
+        <strong>Required Addon:</strong> Use the <strong>SimulationCraft Addon</strong> in-game and
+        type{" "}
+        <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono">
+          /simc
+        </code>{" "}
+        to copy your profile. Exports from other addons (such as WoWSims Exporter, Pawn, or
+        SeventyUpgrades) will not work here.
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Import /simc Profile (SimulationCraft Addon)</h2>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => handleParse(SAMPLE_PROFILE)}
-            className="text-xs px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             Load Frost Mage Sample
           </button>
-          <label className="text-xs px-3 py-1.5 rounded-md bg-arcane-600 text-white cursor-pointer hover:bg-arcane-500">
+          <label className="text-xs px-3 py-1.5 rounded-lg bg-gold-500 text-obsidian-950 font-semibold cursor-pointer hover:bg-gold-400 transition-colors">
             Upload .simc
             <input type="file" accept=".simc,.txt" onChange={handleFile} className="hidden" />
           </label>
@@ -92,11 +102,11 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
         onChange={(e) => handleParse(e.target.value)}
         rows={8}
         placeholder="Paste your WoW Forever /simc output from the SimulationCraft addon here..."
-        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-arcane-500"
+        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
       />
 
       {profile && (
-        <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-sm space-y-3">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-medium">
               {profile.characterName || "Unnamed"} — Level {profile.level} {profile.race}{" "}
@@ -135,7 +145,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, health: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1"
+                    className="w-full rounded border border-slate-700 bg-obsidian-950 px-2 py-1"
                   />
                 </label>
                 <label className="space-y-1">
@@ -146,7 +156,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, mana: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1"
+                    className="w-full rounded border border-slate-700 bg-obsidian-950 px-2 py-1"
                   />
                 </label>
                 <label className="space-y-1">
@@ -158,7 +168,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, meleeCrit: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1"
+                    className="w-full rounded border border-slate-700 bg-obsidian-950 px-2 py-1"
                   />
                 </label>
                 <label className="space-y-1">
@@ -170,7 +180,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, spellCrit: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1"
+                    className="w-full rounded border border-slate-700 bg-obsidian-950 px-2 py-1"
                   />
                 </label>
               </div>
@@ -192,7 +202,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                         nextAttr[i] = Number(e.target.value) || 0;
                         handleSheetChange({ ...sheet, attributes: nextAttr });
                       }}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1"
+                      className="w-full rounded border border-slate-700 bg-obsidian-950 px-2 py-1"
                     />
                   </label>
                 ))}

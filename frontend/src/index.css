@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  .dark body {
+    background-color: #070a10;
+    background-image:
+      radial-gradient(ellipse 80% 45% at 50% -10%, rgba(212, 160, 36, 0.12), transparent),
+      radial-gradient(ellipse 60% 35% at 85% 0%, rgba(59, 130, 246, 0.1), transparent);
+    background-attachment: fixed;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
