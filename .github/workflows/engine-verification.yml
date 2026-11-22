@@ -42,19 +42,19 @@ jobs:
       - name: Test adapter natively
         run: cargo test --locked --manifest-path engine-adapter/rust/Cargo.toml
       - name: Test pinned upstream engine natively
-        run: cargo test --locked --manifest-path engine-source/Cargo.toml
+        run: cargo test --manifest-path engine-source/Cargo.toml
       - name: Install wasm-pack
         run: cargo install wasm-pack --version 0.13.1 --locked
       - name: Build browser WASM
         working-directory: engine-adapter/rust
         env:
           RUSTFLAGS: '-C link-arg=--max-memory=268435456'
-        run: wasm-pack build --target web --release --locked --out-dir ../../artifacts/wasm-web
+        run: wasm-pack build --target web --release --out-dir ../../artifacts/wasm-web
       - name: Build Node WASM for initialization smoke tests
         working-directory: engine-adapter/rust
         env:
           RUSTFLAGS: '-C link-arg=--max-memory=268435456'
-        run: wasm-pack build --target nodejs --release --locked --out-dir ../../artifacts/wasm-node
+        run: wasm-pack build --target nodejs --release --out-dir ../../artifacts/wasm-node
       - name: Exercise actual WASM initialization and input rejection
         run: node scripts/wasm-smoke.cjs
       - name: Record raw and gzip WASM sizes
