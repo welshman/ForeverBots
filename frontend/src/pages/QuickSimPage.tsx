@@ -11,6 +11,7 @@ import {
 
 const DURATION_PRESETS = [60, 180, 300] as const;
 const ITERATION_PRESETS = [500, 1000, 5000] as const;
+const OPTS_KEY = "foreverbots:quicksim_opts:v1";
 
 const PHASE_WIDTH: Record<SimulationProgress["phase"], string> = {
   parsing: "15%",
@@ -23,13 +24,41 @@ const PHASE_WIDTH: Record<SimulationProgress["phase"], string> = {
   cancelled: "100%",
 };
 
+function loadSavedOpts(): { duration: number; iterations: number } {
+  try {
+    const raw = localStorage.getItem(OPTS_KEY);
+    if (!raw) return { duration: 180, iterations: 1000 };
+    const parsed = JSON.parse(raw) as { duration?: number; iterations?: number };
+    return {
+      duration:
+        typeof parsed.duration === "number" && parsed.duration >= 1 && parsed.duration <= 600
+          ? parsed.duration
+          : 180,
+      iterations:
+        typeof parsed.iterations === "number" && parsed.iterations >= 1 && parsed.iterations <= 10000
+          ? parsed.iterations
+          : 1000,
+    };
+  } catch {
+    return { duration: 180, iterations: 1000 };
+  }
+}
+
 export default function QuickSimPage() {
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
-  const [duration, setDuration] = useState(180);
-  const [iterations, setIterations] = useState(1000);
+  const [duration, setDuration] = useState(() => loadSavedOpts().duration);
+  const [iterations, setIterations] = useState(() => loadSavedOpts().iterations);
   const [progress, setProgress] = useState<SimulationProgress | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPTS_KEY, JSON.stringify({ duration, iterations }));
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [duration, iterations]);
 
   const isRunning = Boolean(
     progress &&

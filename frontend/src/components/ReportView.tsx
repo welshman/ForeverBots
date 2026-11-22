@@ -43,6 +43,7 @@ const panel = "rounded-2xl border border-slate-200 dark:border-slate-800 bg-whit
 const cell = "py-2 px-2 text-left";
 export default function ReportView({ result }: { result: SimulationResult }) {
   const [copied, setCopied] = useState(false);
+  const [copiedMd, setCopiedMd] = useState(false);
   const [sortBy, setSortBy] = useState<ActionSort>("damage");
   const [sortDesc, setSortDesc] = useState(true);
   const [auraFilter, setAuraFilter] = useState<AuraFilter>("All");
@@ -148,6 +149,22 @@ export default function ReportView({ result }: { result: SimulationResult }) {
     URL.revokeObjectURL(url);
   };
 
+  const copyMarkdownTable = () => {
+    if (!details) return;
+    const lines = [
+      "| Ability | Share | DPS | Casts | Crit % |",
+      "| --- | ---: | ---: | ---: | ---: |",
+      ...sortedActions.map(
+        (a) =>
+          `| ${a.name} | ${(100 * a.damage / (details.total || 1)).toFixed(1)}% | ${a.dps?.toFixed(1) ?? "—"} | ${a.casts.toFixed(1)} | ${a.crit !== undefined ? `${a.crit.toFixed(1)}%` : "—"} |`
+      ),
+    ];
+    navigator.clipboard?.writeText(lines.join("\n")).then(() => {
+      setCopiedMd(true);
+      setTimeout(() => setCopiedMd(false), 2000);
+    });
+  };
+
   const minDps = result.statistics.min;
   const maxDps = result.statistics.max;
   const meanPos =
@@ -206,13 +223,22 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       {!!sortedActions.length && details && <section className={panel}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold">Damage Breakdown</h3>
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
-          >
-            Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={copyMarkdownTable}
+              className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
+            >
+              {copiedMd ? "Copied MD!" : "Copy Markdown"}
+            </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
         <table className="w-full text-sm"><thead><tr className="text-slate-400">
           <th className={cell}>Ability</th>
