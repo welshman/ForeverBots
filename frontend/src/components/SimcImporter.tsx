@@ -86,19 +86,19 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
       />
 
       {profile && (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">
+        <div className="rounded-2xl border border-slate-200 dark:border-gold-500/20 bg-slate-50/70 dark:bg-obsidian-950/70 p-4 text-sm space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
               {profile.characterName || "Unnamed"} — Level {profile.level} {profile.race}{" "}
               {profile.spec} {profile.className}
             </span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                 profile.status === "supported"
-                  ? "bg-emerald-500/15 text-emerald-400"
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                   : profile.status === "partially-unsupported"
-                  ? "bg-amber-500/15 text-amber-400"
-                  : "bg-rose-500/15 text-rose-400"
+                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                  : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
               }`}
             >
               {profile.status}
@@ -109,38 +109,38 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
           </p>
 
           {profile.level < 60 && (
-            <div className="rounded-lg border border-arcane-500/40 bg-arcane-500/10 p-3 space-y-3">
-              <div className="text-xs text-arcane-300">
+            <div className="rounded-xl border border-gold-500/35 bg-gold-500/10 p-4 space-y-3">
+              <div className="text-xs text-slate-700 dark:text-gold-300 leading-relaxed">
                 <strong>Level {profile.level} Character Sheet Calibration:</strong> The SimulationCraft
                 addon works directly for Level 60 characters. For characters below Level 60, enter your
                 in-game Character Sheet numbers below so the MythicSim Forever engine can calibrate your
                 level without needing a different addon.
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <label className="space-y-1">
-                  <span className="block text-slate-400">Health</span>
+                  <span className="block text-slate-500 dark:text-slate-400">Health</span>
                   <input
                     type="number"
                     value={sheet.health}
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, health: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-obsidian-950 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-slate-400">Mana</span>
+                  <span className="block text-slate-500 dark:text-slate-400">Mana</span>
                   <input
                     type="number"
                     value={sheet.mana}
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, mana: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-obsidian-950 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-slate-400">Melee Crit %</span>
+                  <span className="block text-slate-500 dark:text-slate-400">Melee Crit %</span>
                   <input
                     type="number"
                     step="0.1"
@@ -148,11 +148,11 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, meleeCrit: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-obsidian-950 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-slate-400">Spell Crit %</span>
+                  <span className="block text-slate-500 dark:text-slate-400">Spell Crit %</span>
                   <input
                     type="number"
                     step="0.1"
@@ -160,14 +160,14 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                     onChange={(e) =>
                       handleSheetChange({ ...sheet, spellCrit: Number(e.target.value) || 0 })
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-obsidian-950 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-5 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 {STAT_LABELS.map((label, i) => (
                   <label key={label} className="space-y-1">
-                    <span className="block text-slate-400">Total {label}</span>
+                    <span className="block text-slate-500 dark:text-slate-400">Total {label}</span>
                     <input
                       type="number"
                       value={sheet.attributes[i]}
@@ -182,7 +182,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
                         nextAttr[i] = Number(e.target.value) || 0;
                         handleSheetChange({ ...sheet, attributes: nextAttr });
                       }}
-                      className="w-full rounded-lg border border-slate-700 bg-obsidian-950 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
                     />
                   </label>
                 ))}
