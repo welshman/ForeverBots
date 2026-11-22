@@ -84,6 +84,18 @@ export default function ReportView({ result }: { result: SimulationResult }) {
     });
   };
 
+  const downloadJson = () => {
+    const safeName = (details?.name ?? "character").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const dpsTag = result.dps ? `${Math.round(result.dps)}dps` : "report";
+    const blob = new Blob([result.rawOutput || JSON.stringify(result, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `foreverbots-${safeName}-${dpsTag}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return <div className="space-y-6">
     {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>Simulation Refused or Failed</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
       <section className={panel}>
@@ -100,13 +112,22 @@ export default function ReportView({ result }: { result: SimulationResult }) {
             <h3 className="font-semibold">Simulation Details</h3>
             <p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p>
           </div>
-          <button
-            type="button"
-            onClick={copySummary}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors shrink-0"
-          >
-            {copied ? "Copied!" : "Copy Summary"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={downloadJson}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
+            >
+              Download JSON
+            </button>
+            <button
+              type="button"
+              onClick={copySummary}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors"
+            >
+              {copied ? "Copied!" : "Copy Summary"}
+            </button>
+          </div>
         </div>
       </section>
       {!details && <p className="text-amber-400">Detailed output could not be parsed. Raw data is available below.</p>}

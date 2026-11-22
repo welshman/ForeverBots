@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { parseSimcProfile } from "../lib/simcParser";
 import { CharacterSheetData, ParsedSimcProfile } from "../types/simulation";
+
+const LAST_SIMC_KEY = "foreverbots:last_simc:v1";
 
 const DEFAULT_SHEET: CharacterSheetData = {
   base: [35, 35, 45, 55, 55],
@@ -33,6 +35,15 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
 
   const handleParse = (value: string) => {
     setText(value);
+    try {
+      if (value.trim()) {
+        localStorage.setItem(LAST_SIMC_KEY, value);
+      } else {
+        localStorage.removeItem(LAST_SIMC_KEY);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
     if (!value.trim()) {
       setProfile(null);
       return;
@@ -43,6 +54,18 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
     }
     emitProfile(parsed, parsed.characterSheet ?? sheet);
   };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAST_SIMC_KEY);
+      if (saved && saved.trim()) {
+        handleParse(saved);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSheetChange = (updated: CharacterSheetData) => {
     setSheet(updated);
@@ -70,10 +93,21 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Import /simc Profile (SimulationCraft Addon)</h2>
-        <label className="text-xs px-3 py-1.5 rounded-lg bg-gold-500 text-obsidian-950 font-semibold cursor-pointer hover:bg-gold-400 transition-colors">
-          Upload .simc
-          <input type="file" accept=".simc,.txt" onChange={handleFile} className="hidden" />
-        </label>
+        <div className="flex items-center gap-2">
+          {text && (
+            <button
+              type="button"
+              onClick={() => handleParse("")}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-rose-500/50 hover:text-rose-400 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+          <label className="text-xs px-3 py-1.5 rounded-lg bg-gold-500 text-obsidian-950 font-semibold cursor-pointer hover:bg-gold-400 transition-colors">
+            Upload .simc
+            <input type="file" accept=".simc,.txt" onChange={handleFile} className="hidden" />
+          </label>
+        </div>
       </div>
 
       <textarea
