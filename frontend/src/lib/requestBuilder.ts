@@ -57,6 +57,40 @@ const DEFAULT_SPELL_BY_CLASS: Record<string, number> = {
   warrior: 23894,   // Bloodthirst
 };
 
+const DEFAULT_CLASS_OPTIONS: Record<string, Record<string, unknown>> = {
+  mage: {
+    mage: { options: { classOptions: { defaultMageArmor: "MageArmorMageArmor" } } },
+  },
+  warlock: {
+    warlock: { options: { classOptions: { armor: "DemonArmor", summon: "Imp" } } },
+  },
+  warrior: {
+    warrior: { options: { classOptions: { startingRage: 0 } } },
+  },
+  rogue: {
+    rogue: { options: { classOptions: {} } },
+  },
+  hunter: {
+    hunter: {
+      options: {
+        classOptions: { ammo: "ThoriumHeadedArrow", petType: "Cat", petUptime: 1 },
+      },
+    },
+  },
+  priest: {
+    priest: { options: { classOptions: {} } },
+  },
+  paladin: {
+    paladin: { options: { classOptions: {} } },
+  },
+  druid: {
+    druid: { options: { classOptions: {} } },
+  },
+  shaman: {
+    shaman: { options: { classOptions: {} } },
+  },
+};
+
 export interface GearOverride {
   slot: string;
   itemId: number;
@@ -68,7 +102,8 @@ export function buildForeverRequestJson(
   options: SimulationOptions,
   overrides: GearOverride[] = []
 ): string {
-  const classEnum = CLASS_ENUM[profile.className.toLowerCase()] ?? "ClassMage";
+  const lowerClass = profile.className.toLowerCase();
+  const classEnum = CLASS_ENUM[lowerClass] ?? "ClassMage";
   const raceEnum = RACE_ENUM[profile.race.toLowerCase()] ?? "RaceHuman";
 
   const slotMap = new Map<string, { id?: number; enchant?: number }>();
@@ -96,7 +131,7 @@ export function buildForeverRequestJson(
     return entry.enchant ? { id: entry.id, enchant: entry.enchant } : { id: entry.id };
   });
 
-  const defaultSpellId = DEFAULT_SPELL_BY_CLASS[profile.className.toLowerCase()] ?? 25304;
+  const defaultSpellId = DEFAULT_SPELL_BY_CLASS[lowerClass] ?? 25304;
   const durationVariation = Math.max(
     0,
     Math.min(120, Math.round((options.durationSeconds * options.durationVariancePct) / 100))
@@ -110,9 +145,7 @@ export function buildForeverRequestJson(
     race: raceEnum,
     level: playerLevel,
     reactionTimeMs: Math.max(10, Math.min(1000, options.latencyMs || 100)),
-    distanceFromTarget: ["rogue", "warrior", "paladin"].includes(profile.className.toLowerCase())
-      ? 0
-      : 20,
+    distanceFromTarget: ["rogue", "warrior", "paladin"].includes(lowerClass) ? 0 : 20,
     equipment: { items },
     rotation: {
       type: "TypeAPL",
@@ -121,6 +154,7 @@ export function buildForeverRequestJson(
         { action: { castSpell: { spellId: { spellId: defaultSpellId } } } },
       ],
     },
+    ...(DEFAULT_CLASS_OPTIONS[lowerClass] ?? {}),
   };
 
   if (profile.talents && profile.talents.includes("-")) {

@@ -43,6 +43,18 @@ const GEAR_SLOTS = new Set([
   "ranged",
 ]);
 
+function parseColonPairs(raw: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const part of raw.split("/")) {
+    const [k, v] = part.split(":");
+    if (k && v !== undefined) {
+      const n = Number(v);
+      if (Number.isFinite(n)) out[k.trim().toLowerCase()] = n;
+    }
+  }
+  return out;
+}
+
 export function parseSimcProfile(input: string): ParsedSimcProfile {
   const issues: ParseIssue[] = [];
   if (input.length > MAX_SIMC_BYTES) {
@@ -78,7 +90,7 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
   let professions: string | undefined;
   const gear: GearItem[] = [];
 
-  // Optional commented stats exported by SimulationCraft addon
+  // Commented character sheet stats exported by SimulationCraft Addon (WoW Forever)
   let sheetBase: [number, number, number, number, number] | undefined;
   let sheetAttr: [number, number, number, number, number] | undefined;
   let sheetHealth: number | undefined;
@@ -97,31 +109,47 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
       if (eq !== -1) {
         const ck = commentBody.slice(0, eq).trim().toLowerCase();
         const cv = commentBody.slice(eq + 1).trim();
-        if (ck === "health") {
-          const n = Number(cv);
-          if (Number.isFinite(n) && n > 0) sheetHealth = n;
-        } else if (ck === "mana") {
-          const n = Number(cv);
-          if (Number.isFinite(n) && n >= 0) sheetMana = n;
-        } else if (ck === "melee_crit") {
-          const n = Number(cv);
-          if (Number.isFinite(n)) sheetMeleeCrit = n;
-        } else if (ck === "spell_crit") {
-          const n = Number(cv.split("/")[0]);
-          if (Number.isFinite(n)) sheetSpellCrit = n;
-        } else if (ck === "base_stats" || ck === "attributes") {
-          const nums = cv.split(/[/:,]/).map(Number).filter(Number.isFinite);
-          if (nums.length >= 5) {
-            const tuple: [number, number, number, number, number] = [
-              nums[0],
-              nums[1],
-              nums[2],
-              nums[3],
-              nums[4],
+
+        if (ck === "character_stats") {
+          const map = parseColonPairs(cv);
+          if (map.health !== undefined) sheetHealth = map.health;
+          if (map.mana !== undefined) sheetMana = map.mana;
+          if (
+            map.strength !== undefined &&
+            map.agility !== undefined &&
+            map.stamina !== undefined &&
+            map.intellect !== undefined &&
+            map.spirit !== undefined
+          ) {
+            sheetAttr = [
+              map.strength,
+              map.agility,
+              map.stamina,
+              map.intellect,
+              map.spirit,
             ];
-            if (ck === "base_stats") sheetBase = tuple;
-            else sheetAttr = tuple;
           }
+        } else if (ck === "character_stats_base") {
+          const map = parseColonPairs(cv);
+          if (
+            map.strength !== undefined &&
+            map.agility !== undefined &&
+            map.stamina !== undefined &&
+            map.intellect !== undefined &&
+            map.spirit !== undefined
+          ) {
+            sheetBase = [
+              map.strength,
+              map.agility,
+              map.stamina,
+              map.intellect,
+              map.spirit,
+            ];
+          }
+        } else if (ck === "crit") {
+          const map = parseColonPairs(cv);
+          if (map.melee !== undefined) sheetMeleeCrit = map.melee;
+          if (map.spell !== undefined) sheetSpellCrit = map.spell;
         }
       }
       return;
@@ -156,7 +184,7 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
       for (const part of parts) {
         const [k, v] = part.split("=");
         if (!v) {
-          if (!itemName) itemName = k;
+          if (!itemName && k) itemName = k;
         } else if (k === "id") {
           const parsedId = Number(v);
           if (Number.isFinite(parsedId)) itemId = parsedId;
