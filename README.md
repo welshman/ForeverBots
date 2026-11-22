@@ -2,7 +2,39 @@
 
 > **Simulate. Optimize. Master WoW Forever.**
 
-ForeverBots is a client-side WebAssembly simulation web application for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f`). It compiles the Rust engine to WebAssembly, executes it in a dedicated Web Worker, and deploys directly to **GitHub Pages** with no required backend.
+ForeverBots is a free, client-side WebAssembly combat simulator for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f`). It compiles the Rust engine to WebAssembly, runs simulations inside a dedicated browser Web Worker, and deploys directly to **GitHub Pages** with no backend or account required.
+
+## Required In-Game Addon
+
+ForeverBots imports character profiles from the **SimulationCraft Addon**:
+
+1. Install the **SimulationCraft Addon** in-game.
+2. Type `/simc` and copy the generated text.
+3. Paste the output into the importer or upload a `.simc` / `.txt` file.
+
+For characters below Level 60, the importer displays **Character Sheet Calibration** fields (Health, Mana, Melee Crit %, Spell Crit %, and base attributes) so the engine can calibrate your level.
+
+## Features & Tools
+
+- **Quick Sim (`/quick-sim`)** — Run Patchwerk single-target simulations with configurable fight length and iterations. Includes:
+  - DPS headline, standard deviation, min/max, and one-click **Copy Summary** for Discord/chat.
+  - **Damage Breakdown** table with share bars, average damage per fight, DPS, casts per fight, and crit %.
+  - **Buff & Debuff Uptime** table with uptime bars and proc counts.
+  - **Sample Ability Log** timeline with full-log parsing, spell-name lookup, and a toggleable raw combat log view.
+  - **Recent Simulations** local history list so you can reopen previous runs.
+- **Top Gear (`/top-gear`)** — Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.
+- **Droptimizer (`/droptimizer`)** — Rank candidate item upgrades using verified engine item data.
+- **Gear Compare (`/gear-compare`)** — Compare two profiles side-by-side with plain-language statistical verdicts.
+- **Advanced Sim (`/advanced-sim`)** — Run validated `prepared_v2` JSON directly through the Rust/WASM coverage gate and engine.
+- **About (`/about`)** — Overview of how ForeverBots works, required addon info, and current engine limitations.
+- **WoW Forever Theme & Responsive UI** — Unified obsidian and gold styling, dark/light mode toggle, and a responsive mobile navigation menu.
+
+## Current Limitations
+
+- Simulations currently focus on **Patchwerk single-target** encounters.
+- Characters **below Level 60** require manual Character Sheet calibration fields in the importer.
+- Coverage-gated engine rules intentionally refuse unsupported specs, items, or mechanics rather than returning misleading numbers.
+- Some less common spell IDs in reports may still appear as `Spell #ID` until added to the spell-name map.
 
 ## Local Development
 
