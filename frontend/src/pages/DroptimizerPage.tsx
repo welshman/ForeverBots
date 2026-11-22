@@ -82,30 +82,30 @@ export default function DroptimizerPage() {
 
       <SimcImporter onParsed={setProfile} />
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-        <label className="block text-xs font-medium text-slate-400">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
+        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
           Candidate Drops (slot=itemId, one per line)
         </label>
         <textarea
           value={candidateLines}
           onChange={(e) => setCandidateLines(e.target.value)}
           rows={5}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 font-mono text-xs"
+          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
         />
         <button
           type="button"
           disabled={!profile || profile.status === "unparseable" || running}
           onClick={runDroptimizer}
-          className="px-4 py-2 rounded-md bg-arcane-600 text-white text-sm font-medium hover:bg-arcane-500 disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
         >
           {running ? "Evaluating Drops..." : "Run Droptimizer"}
         </button>
       </div>
 
       {results.length > 0 && (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 overflow-auto">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 overflow-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 border-b border-slate-800">
+            <thead className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-800">
               <tr>
                 <th className="py-2">Slot</th>
                 <th className="py-2">Item ID</th>

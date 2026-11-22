@@ -62,11 +62,11 @@ export default function GearComparePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold">Profile A (Baseline)</h2>
+          <h2 className="text-sm font-semibold text-gold-400">Profile A (Baseline)</h2>
           <SimcImporter onParsed={setProfileA} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold">Profile B (Candidate)</h2>
+          <h2 className="text-sm font-semibold text-gold-400">Profile B (Candidate)</h2>
           <SimcImporter onParsed={setProfileB} />
         </div>
       </div>
@@ -75,16 +75,16 @@ export default function GearComparePage() {
         type="button"
         disabled={!profileA || !profileB || running}
         onClick={runCompare}
-        className="px-4 py-2 rounded-md bg-arcane-600 text-white text-sm font-medium hover:bg-arcane-500 disabled:opacity-50"
+        className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
       >
         {running ? "Comparing Profiles..." : "Compare Profiles"}
       </button>
 
       {(resA || resB) && (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
           {verdict && delta !== undefined ? (
             <div className="space-y-1">
-              <div className="text-lg font-bold text-arcane-400">{verdict}</div>
+              <div className="text-lg font-bold text-gold-400">{verdict}</div>
               <div className="text-sm">
                 Profile A: <span className="font-mono">{resA?.dps?.toFixed(1)}</span> DPS • Profile B:{" "}
                 <span className="font-mono">{resB?.dps?.toFixed(1)}</span> DPS • Delta:{" "}

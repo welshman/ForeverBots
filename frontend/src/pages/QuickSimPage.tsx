@@ -51,34 +51,34 @@ export default function QuickSimPage() {
 
       <SimcImporter onParsed={setProfile} />
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-wrap items-end gap-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 flex flex-wrap items-end gap-4">
         <label className="text-xs space-y-1">
-          <span className="block text-slate-500">Fight Length (s)</span>
+          <span className="block text-slate-500 dark:text-slate-400">Fight Length (s)</span>
           <input
             type="number"
             min={1}
             max={600}
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-28 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+            className="w-28 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
           />
         </label>
         <label className="text-xs space-y-1">
-          <span className="block text-slate-500">Iterations</span>
+          <span className="block text-slate-500 dark:text-slate-400">Iterations</span>
           <input
             type="number"
             min={1}
             max={10000}
             value={iterations}
             onChange={(e) => setIterations(Number(e.target.value))}
-            className="w-32 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+            className="w-32 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
           />
         </label>
         <button
           type="button"
           disabled={!profile || profile.status === "unparseable"}
           onClick={handleRun}
-          className="px-4 py-2 rounded-md bg-arcane-600 text-white text-sm font-medium hover:bg-arcane-500 disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
         >
           Run Quick Sim
         </button>
@@ -86,7 +86,7 @@ export default function QuickSimPage() {
           <button
             type="button"
             onClick={() => simulationRunner.cancel()}
-            className="px-3 py-2 rounded-md bg-rose-600 text-white text-sm"
+            className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-500 transition-colors"
           >
             Cancel
           </button>

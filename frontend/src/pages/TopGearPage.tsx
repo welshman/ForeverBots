@@ -81,7 +81,6 @@ export default function TopGearPage() {
           { slot: cand.slot, itemId: cand.itemId, raw: `id=${cand.itemId}`, line: 0 },
         ],
       };
-      // Validate request builds cleanly before running
       buildForeverRequestJson(customProfile, opts);
       const res = await simulationRunner.run(
         { jobId: crypto.randomUUID(), profile: customProfile, options: opts },
@@ -114,15 +113,15 @@ export default function TopGearPage() {
 
       <SimcImporter onParsed={setProfile} />
 
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4">
         <h2 className="text-base font-semibold">Candidate Items</h2>
         <div className="flex flex-wrap gap-2 items-end">
           <label className="text-xs space-y-1">
-            <span className="block text-slate-500">Slot</span>
+            <span className="block text-slate-500 dark:text-slate-400">Slot</span>
             <select
               value={newSlot}
               onChange={(e) => setNewSlot(e.target.value)}
-              className="rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+              className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
             >
               {["head", "neck", "shoulder", "back", "chest", "wrist", "hands", "waist", "legs", "feet", "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand", "ranged"].map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -130,29 +129,29 @@ export default function TopGearPage() {
             </select>
           </label>
           <label className="text-xs space-y-1">
-            <span className="block text-slate-500">Item ID</span>
+            <span className="block text-slate-500 dark:text-slate-400">Item ID</span>
             <input
               type="number"
               value={newItemId}
               onChange={(e) => setNewItemId(e.target.value)}
               placeholder="e.g. 19356"
-              className="w-32 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+              className="w-32 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
             />
           </label>
           <label className="text-xs space-y-1">
-            <span className="block text-slate-500">Label (optional)</span>
+            <span className="block text-slate-500 dark:text-slate-400">Label (optional)</span>
             <input
               type="text"
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Item name"
-              className="w-48 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+              className="w-48 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70"
             />
           </label>
           <button
             type="button"
             onClick={addCandidate}
-            className="px-3 py-1.5 rounded-md bg-slate-200 dark:bg-slate-800 text-sm font-medium"
+            className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-sm font-medium transition-colors"
           >
             Add Item
           </button>
@@ -160,7 +159,7 @@ export default function TopGearPage() {
 
         <ul className="text-xs space-y-1 text-slate-400">
           {candidates.map((c) => (
-            <li key={c.id} className="flex items-center justify-between py-1 border-b border-slate-800/50">
+            <li key={c.id} className="flex items-center justify-between py-1.5 border-b border-slate-800/50">
               <span>{c.label} — slot: {c.slot}, id: {c.itemId}</span>
               <button
                 type="button"
@@ -177,16 +176,16 @@ export default function TopGearPage() {
           type="button"
           disabled={!profile || profile.status === "unparseable" || running}
           onClick={runTopGear}
-          className="px-4 py-2 rounded-md bg-arcane-600 text-white text-sm font-medium hover:bg-arcane-500 disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
         >
           {running ? "Simulating Combinations..." : "Run Top Gear"}
         </button>
       </div>
 
       {results.length > 0 && (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 overflow-auto">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 overflow-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 border-b border-slate-800">
+            <thead className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-800">
               <tr>
                 <th className="py-2">Loadout</th>
                 <th className="py-2">Average DPS</th>

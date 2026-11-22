@@ -48,35 +48,39 @@ export default function AdvancedSimPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Advanced Sim</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Paste a MythicSim Forever <code>prepared_v2</code> JSON payload to run directly against the
-        compiled Rust/WASM coverage gate and simulator.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Advanced Sim</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Paste a MythicSim Forever <code>prepared_v2</code> JSON payload to run directly against the
+          compiled Rust/WASM coverage gate and simulator.
+        </p>
+      </div>
 
-      <textarea
-        value={rawJson}
-        onChange={(e) => handleChange(e.target.value)}
-        rows={14}
-        placeholder="Paste prepared_v2 JSON here (e.g., from mythicsim-forever-engine/fixtures/...)"
-        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 font-mono text-xs"
-      />
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4">
+        <textarea
+          value={rawJson}
+          onChange={(e) => handleChange(e.target.value)}
+          rows={14}
+          placeholder="Paste prepared_v2 JSON here (e.g., from mythicsim-forever-engine/fixtures/...)"
+          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+        />
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          disabled={!rawJson.trim()}
-          onClick={handleRun}
-          className="px-4 py-2 rounded-md bg-arcane-600 text-white text-sm font-medium hover:bg-arcane-500 disabled:opacity-50"
-        >
-          Run Prepared JSON in WASM
-        </button>
-        {progress && (
-          <span className="text-xs text-slate-400">
-            {progress.phase}: {progress.message}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={!rawJson.trim()}
+            onClick={handleRun}
+            className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
+          >
+            Run Prepared JSON in WASM
+          </button>
+          {progress && (
+            <span className="text-xs text-slate-400">
+              {progress.phase}: {progress.message}
+            </span>
+          )}
+        </div>
       </div>
 
       {result && <ReportView result={result} />}
