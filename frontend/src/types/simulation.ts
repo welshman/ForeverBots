@@ -24,6 +24,15 @@ export interface ParseIssue {
   message: string;
 }
 
+export interface CharacterSheetData {
+  base: [number, number, number, number, number];
+  attributes: [number, number, number, number, number];
+  health: number;
+  mana: number;
+  meleeCrit: number;
+  spellCrit: number;
+}
+
 export interface ParsedSimcProfile {
   characterName: string;
   className: string;
@@ -36,6 +45,7 @@ export interface ParsedSimcProfile {
   glyphs?: string;
   professions?: string;
   gear: GearItem[];
+  characterSheet?: CharacterSheetData;
   rawText: string;
   status: "supported" | "partially-unsupported" | "unparseable";
   issues: ParseIssue[];

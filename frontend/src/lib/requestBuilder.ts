@@ -101,12 +101,14 @@ export function buildForeverRequestJson(
     0,
     Math.min(120, Math.round((options.durationSeconds * options.durationVariancePct) / 100))
   );
+  const playerLevel = profile.level || 60;
+  const targetLevel = playerLevel === 60 ? 63 : Math.min(63, playerLevel + 3);
 
   const player: Record<string, unknown> = {
     name: profile.characterName || "ForeverPlayer",
     class: classEnum,
     race: raceEnum,
-    level: profile.level || 60,
+    level: playerLevel,
     reactionTimeMs: Math.max(10, Math.min(1000, options.latencyMs || 100)),
     distanceFromTarget: ["rogue", "warrior", "paladin"].includes(profile.className.toLowerCase())
       ? 0
@@ -125,6 +127,24 @@ export function buildForeverRequestJson(
     player.talentsString = profile.talents;
   }
 
+  if (playerLevel < 60 && profile.characterSheet) {
+    player.characterSheet = {
+      base: profile.characterSheet.base,
+      attributes: profile.characterSheet.attributes,
+      health: profile.characterSheet.health,
+      mana: profile.characterSheet.mana,
+      meleeCrit: profile.characterSheet.meleeCrit,
+      spellCrit: [
+        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit,
+      ],
+    };
+  }
+
   const request = {
     encounter: {
       duration: options.durationSeconds,
@@ -137,7 +157,7 @@ export function buildForeverRequestJson(
       targets: Array.from({ length: Math.max(1, Math.min(5, options.targetCount)) }, (_, i) => ({
         id: 213336 + i,
         name: `Target ${i + 1}`,
-        level: 63,
+        level: targetLevel,
         canCrush: true,
         parryHaste: true,
         minBaseDamage: 3000,
