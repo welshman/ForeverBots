@@ -25,26 +25,88 @@ interface AuraRow {
 }
 
 const SPELL_NAMES: Record<number, string> = {
+  // Warlock
+  686: "Shadow Bolt",
+  695: "Shadow Bolt",
+  705: "Shadow Bolt",
+  1088: "Shadow Bolt",
+  1106: "Shadow Bolt",
+  7641: "Shadow Bolt",
+  11659: "Shadow Bolt",
+  11660: "Shadow Bolt",
+  11661: "Shadow Bolt",
+  25307: "Shadow Bolt",
+  172: "Corruption",
+  6222: "Corruption",
+  6223: "Corruption",
+  7648: "Corruption",
+  11671: "Corruption",
+  11672: "Corruption",
+  25311: "Corruption",
+  348: "Immolate",
+  707: "Immolate",
+  1094: "Immolate",
+  2941: "Immolate",
+  11665: "Immolate",
+  11667: "Immolate",
+  11668: "Immolate",
+  25309: "Immolate",
+  980: "Curse of Agony",
+  1014: "Curse of Agony",
+  6217: "Curse of Agony",
+  11711: "Curse of Agony",
+  11712: "Curse of Agony",
+  11713: "Curse of Agony",
+  1454: "Life Tap",
+  1455: "Life Tap",
+  1456: "Life Tap",
+  11687: "Life Tap",
+  11688: "Life Tap",
+  11689: "Life Tap",
+  687: "Demon Skin",
+  696: "Demon Skin",
+  706: "Demon Armor",
+  1086: "Demon Armor",
+  11733: "Demon Armor",
+  11734: "Demon Armor",
+  11735: "Demon Armor",
+  3110: "Firebolt (Imp)",
+  7799: "Firebolt (Imp)",
+  7800: "Firebolt (Imp)",
+  7801: "Firebolt (Imp)",
+  7802: "Firebolt (Imp)",
+  11762: "Firebolt (Imp)",
+  11763: "Firebolt (Imp)",
+  1311680: "Curse of Elements",
+  // Mage
   116: "Frostbolt",
   25304: "Frostbolt",
+  133: "Fireball",
   25306: "Fireball",
-  25307: "Shadow Bolt",
-  25309: "Corruption",
-  25311: "Immolate",
+  2136: "Fire Blast",
+  10199: "Fire Blast",
+  2948: "Scorch",
+  10207: "Scorch",
   25345: "Arcane Missiles",
   25346: "Arcane Missiles (Tick)",
   1239700: "Arcane Blast",
-  10947: "Mind Blast",
-  25298: "Starfire",
-  15208: "Lightning Bolt",
-  20904: "Aimed Shot",
-  20271: "Judgement",
-  11294: "Sinister Strike",
-  23894: "Bloodthirst",
   12042: "Arcane Power",
   12043: "Presence of Mind",
   12051: "Evocation",
-  1311680: "Curse of Elements",
+  // Other classes
+  10947: "Mind Blast",
+  10942: "Shadow Word: Pain",
+  25298: "Starfire",
+  9835: "Moonfire",
+  15208: "Lightning Bolt",
+  20904: "Aimed Shot",
+  14290: "Multi-Shot",
+  20271: "Judgement",
+  11294: "Sinister Strike",
+  31016: "Eviscerate",
+  23894: "Bloodthirst",
+  1680: "Whirlwind",
+  25286: "Heroic Strike",
 };
 
 function schoolBarColor(school?: number): string {
@@ -68,20 +130,52 @@ function schoolBarColor(school?: number): string {
   }
 }
 
-function formatActionKey(rawKey: string): string {
-  try {
-    const k = JSON.parse(rawKey) as {
+function formatActionId(idObj: unknown, fallbackKey?: string): string {
+  if (idObj && typeof idObj === "object") {
+    const k = idObj as {
       spellId?: number;
+      spell_id?: number;
       itemId?: number;
+      item_id?: number;
       otherId?: string;
+      other_id?: string;
     };
-    if (k.spellId) return SPELL_NAMES[k.spellId] ?? `Spell #${k.spellId}`;
-    if (k.itemId) return `Item #${k.itemId}`;
-    if (k.otherId) return k.otherId.replace(/^OtherAction/, "");
-  } catch {
-    // fall through
+    const sid = k.spellId ?? k.spell_id;
+    if (sid) return SPELL_NAMES[sid] ?? `Spell #${sid}`;
+    const iid = k.itemId ?? k.item_id;
+    if (iid) return `Item #${iid}`;
+    const oid = k.otherId ?? k.other_id;
+    if (oid) return String(oid).replace(/^OtherAction/, "");
   }
-  return rawKey;
+  if (fallbackKey) {
+    try {
+      const parsed = JSON.parse(fallbackKey);
+      if (parsed && typeof parsed === "object") {
+        return formatActionId(parsed);
+      }
+    } catch {
+      // fall through
+    }
+    return fallbackKey;
+  }
+  return "Unknown Ability";
+}
+
+function iterEntries(
+  collection: unknown
+): Array<{ key: string; metric: Record<string, unknown> }> {
+  if (!collection) return [];
+  if (Array.isArray(collection)) {
+    return collection
+      .filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object"))
+      .map((metric, idx) => ({ key: String(idx), metric }));
+  }
+  if (typeof collection === "object") {
+    return Object.entries(collection as Record<string, Record<string, unknown>>).map(
+      ([key, metric]) => ({ key, metric })
+    );
+  }
+  return [];
 }
 
 export default function ReportView({ result }: ReportViewProps) {
@@ -101,8 +195,8 @@ export default function ReportView({ result }: ReportViewProps) {
       const actionRows: ActionRow[] = [];
       let totalDamage = 0;
 
-      if (player?.actions && typeof player.actions === "object") {
-        for (const [key, metric] of Object.entries<Record<string, unknown>>(player.actions)) {
+      const collectActions = (actionsCollection: unknown, prefix = "") => {
+        for (const { key, metric } of iterEntries(actionsCollection)) {
           const targets = Array.isArray(metric.targets) ? metric.targets : [];
           let dmg = 0;
           let casts = 0;
@@ -118,8 +212,12 @@ export default function ReportView({ result }: ReportViewProps) {
             const avgDmg = dmg / iterations;
             totalDamage += avgDmg;
             const totalLanded = hits + crits;
+            const rawName =
+              typeof metric.name === "string" && metric.name
+                ? metric.name
+                : formatActionId(metric.id ?? metric.actionId, key);
             actionRows.push({
-              label: formatActionKey(key),
+              label: prefix ? `${prefix}: ${rawName}` : rawName,
               schoolColor: schoolBarColor(Number(metric.spellSchool)),
               damage: avgDmg,
               dps: avgDmg / avgDuration,
@@ -131,6 +229,13 @@ export default function ReportView({ result }: ReportViewProps) {
             });
           }
         }
+      };
+
+      collectActions(player?.actions);
+      if (Array.isArray(player?.pets)) {
+        for (const pet of player.pets as Array<Record<string, unknown>>) {
+          collectActions(pet.actions, String(pet.name || "Pet"));
+        }
       }
 
       for (const row of actionRows) {
@@ -139,16 +244,16 @@ export default function ReportView({ result }: ReportViewProps) {
       actionRows.sort((a, b) => b.damage - a.damage);
 
       const auraRows: AuraRow[] = [];
-      const collectAuras = (
-        source: Record<string, Record<string, unknown>> | undefined,
-        kind: "Buff" | "Debuff"
-      ) => {
-        if (!source || typeof source !== "object") return;
-        for (const [key, metric] of Object.entries(source)) {
+      const collectAuras = (source: unknown, kind: "Buff" | "Debuff") => {
+        for (const { key, metric } of iterEntries(source)) {
           const uptime = Number(metric.uptimeSecondsAvg ?? 0);
           if (uptime <= 0) continue;
+          const label =
+            typeof metric.name === "string" && metric.name
+              ? metric.name
+              : formatActionId(metric.id ?? metric.auraId, key);
           auraRows.push({
-            label: formatActionKey(key),
+            label,
             uptimePct: Math.min(100, (uptime / avgDuration) * 100),
             procs: Number(metric.procsAvg ?? 0),
             kind,

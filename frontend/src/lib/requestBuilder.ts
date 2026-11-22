@@ -45,17 +45,108 @@ const SLOT_ORDER = [
   "ranged",
 ] as const;
 
-const DEFAULT_SPELL_BY_CLASS: Record<string, number> = {
-  mage: 25304,      // Frostbolt
-  warlock: 25307,   // Shadow Bolt
-  priest: 10947,    // Mind Blast
-  druid: 25298,     // Starfire
-  shaman: 15208,    // Lightning Bolt
-  hunter: 20904,    // Aimed Shot
-  paladin: 20271,   // Judgement
-  rogue: 11294,     // Sinister Strike
-  warrior: 23894,   // Bloodthirst
-};
+function dotRefreshAction(spellId: number) {
+  return {
+    action: {
+      castSpell: { spellId: { spellId } },
+      condition: {
+        not: { val: { dotIsActive: { spellId: { spellId } } } },
+      },
+    },
+  };
+}
+
+function buildDefaultRotation(lowerClass: string): Array<Record<string, unknown>> {
+  const base: Array<Record<string, unknown>> = [
+    { action: { autocastOtherCooldowns: {} } },
+  ];
+
+  switch (lowerClass) {
+    case "warlock":
+      return [
+        ...base,
+        {
+          action: {
+            castSpell: { spellId: { spellId: 11689 } }, // Life Tap
+            condition: {
+              cmp: {
+                lhs: { currentManaPercent: {} },
+                op: "OpLt",
+                rhs: { const: { val: "20%" } },
+              },
+            },
+          },
+        },
+        dotRefreshAction(11713), // Curse of Agony
+        dotRefreshAction(25311), // Corruption
+        dotRefreshAction(25309), // Immolate
+        { action: { castSpell: { spellId: { spellId: 25307 } } } }, // Shadow Bolt
+      ];
+    case "mage":
+      return [
+        ...base,
+        {
+          action: {
+            castSpell: { spellId: { spellId: 12051 } }, // Evocation
+            condition: {
+              cmp: {
+                lhs: { currentManaPercent: {} },
+                op: "OpLt",
+                rhs: { const: { val: "15%" } },
+              },
+            },
+          },
+        },
+        { action: { castSpell: { spellId: { spellId: 10199 } } } }, // Fire Blast
+        { action: { castSpell: { spellId: { spellId: 25304 } } } }, // Frostbolt
+      ];
+    case "priest":
+      return [
+        ...base,
+        dotRefreshAction(10942), // Shadow Word: Pain
+        { action: { castSpell: { spellId: { spellId: 10947 } } } }, // Mind Blast
+      ];
+    case "druid":
+      return [
+        ...base,
+        dotRefreshAction(9835), // Moonfire
+        { action: { castSpell: { spellId: { spellId: 25298 } } } }, // Starfire
+      ];
+    case "shaman":
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 15208 } } } }, // Lightning Bolt
+      ];
+    case "hunter":
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 20904 } } } }, // Aimed Shot
+        { action: { castSpell: { spellId: { spellId: 14290 } } } }, // Multi-Shot
+      ];
+    case "paladin":
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 20271 } } } }, // Judgement
+      ];
+    case "rogue":
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 11294 } } } }, // Sinister Strike
+      ];
+    case "warrior":
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 23894 } } } }, // Bloodthirst
+        { action: { castSpell: { spellId: { spellId: 1680 } } } }, // Whirlwind
+        { action: { castSpell: { spellId: { spellId: 25286 } } } }, // Heroic Strike
+      ];
+    default:
+      return [
+        ...base,
+        { action: { castSpell: { spellId: { spellId: 25304 } } } },
+      ];
+  }
+}
 
 const DEFAULT_CLASS_OPTIONS: Record<string, Record<string, unknown>> = {
   mage: {
@@ -131,7 +222,6 @@ export function buildForeverRequestJson(
     return entry.enchant ? { id: entry.id, enchant: entry.enchant } : { id: entry.id };
   });
 
-  const defaultSpellId = DEFAULT_SPELL_BY_CLASS[lowerClass] ?? 25304;
   const durationVariation = Math.max(
     0,
     Math.min(120, Math.round((options.durationSeconds * options.durationVariancePct) / 100))
@@ -149,10 +239,7 @@ export function buildForeverRequestJson(
     equipment: { items },
     rotation: {
       type: "TypeAPL",
-      priorityList: [
-        { action: { autocastOtherCooldowns: {} } },
-        { action: { castSpell: { spellId: { spellId: defaultSpellId } } } },
-      ],
+      priorityList: buildDefaultRotation(lowerClass),
     },
     ...(DEFAULT_CLASS_OPTIONS[lowerClass] ?? {}),
   };
