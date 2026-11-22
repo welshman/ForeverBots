@@ -5,7 +5,6 @@ import HomePage from "./pages/HomePage";
 import QuickSimPage from "./pages/QuickSimPage";
 import TopGearPage from "./pages/TopGearPage";
 import DroptimizerPage from "./pages/DroptimizerPage";
-import StatWeightsPage from "./pages/StatWeightsPage";
 import GearComparePage from "./pages/GearComparePage";
 import AdvancedSimPage from "./pages/AdvancedSimPage";
 import { loadPreferences, savePreferences } from "./lib/storage";
@@ -33,7 +32,6 @@ export default function App() {
           <Route path="/quick-sim" element={<QuickSimPage />} />
           <Route path="/top-gear" element={<TopGearPage />} />
           <Route path="/droptimizer" element={<DroptimizerPage />} />
-          <Route path="/stat-weights" element={<StatWeightsPage />} />
           <Route path="/gear-compare" element={<GearComparePage />} />
           <Route path="/advanced-sim" element={<AdvancedSimPage />} />
         </Routes>

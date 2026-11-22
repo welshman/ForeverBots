@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { to: "/quick-sim", label: "Quick Sim" },
   { to: "/top-gear", label: "Top Gear" },
   { to: "/droptimizer", label: "Droptimizer" },
-  { to: "/stat-weights", label: "Stat Weights" },
   { to: "/gear-compare", label: "Gear Compare" },
   { to: "/advanced-sim", label: "Advanced Sim" },
 ];

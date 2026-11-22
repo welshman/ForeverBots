@@ -17,11 +17,6 @@ const TOOLS = [
     desc: "Rank candidate upgrades transparently using verified engine item data.",
   },
   {
-    to: "/stat-weights",
-    title: "Stat Weights",
-    desc: "Compute normalized stat weights with confidence intervals and accuracy caveats.",
-  },
-  {
     to: "/gear-compare",
     title: "Gear Compare",
     desc: "Compare two or more profiles side-by-side with plain-language statistical verdicts.",
