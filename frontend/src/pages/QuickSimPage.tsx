@@ -212,23 +212,49 @@ export default function QuickSimPage() {
             </button>
           </div>
           <div className="divide-y divide-slate-200 dark:divide-slate-800/70">
-            {history.slice(0, 8).map((item) => (
-              <button
-                key={item.jobId}
-                type="button"
-                onClick={() => setResult(item)}
-                className="w-full py-2.5 flex flex-wrap items-center justify-between gap-2 text-left text-xs hover:bg-slate-100/60 dark:hover:bg-obsidian-950/60 px-2 rounded-lg transition-colors"
-              >
-                <span className="font-medium text-slate-700 dark:text-slate-200">
-                  {item.ok && item.dps !== undefined
-                    ? `${item.dps.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS`
-                    : "Failed / Refused"}
-                </span>
-                <span className="font-mono text-slate-500 dark:text-slate-400">
-                  {item.durationMs}ms • {item.engineVersion}
-                </span>
-              </button>
-            ))}
+            {history.slice(0, 8).map((item) => {
+              const isSelected = result?.jobId === item.jobId;
+              const delta =
+                result?.ok &&
+                result.dps !== undefined &&
+                item.ok &&
+                item.dps !== undefined &&
+                !isSelected
+                  ? item.dps - result.dps
+                  : null;
+              return (
+                <button
+                  key={item.jobId}
+                  type="button"
+                  onClick={() => setResult(item)}
+                  className={`w-full py-2.5 flex flex-wrap items-center justify-between gap-2 text-left text-xs px-2 rounded-lg transition-colors ${
+                    isSelected
+                      ? "bg-gold-500/10 text-gold-400"
+                      : "hover:bg-slate-100/60 dark:hover:bg-obsidian-950/60"
+                  }`}
+                >
+                  <span className="font-medium flex items-center gap-2">
+                    <span>
+                      {item.ok && item.dps !== undefined
+                        ? `${item.dps.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS`
+                        : "Failed / Refused"}
+                    </span>
+                    {delta !== null && (
+                      <span
+                        className={`font-mono text-[11px] ${
+                          delta >= 0 ? "text-emerald-400" : "text-rose-400"
+                        }`}
+                      >
+                        {delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-mono text-slate-500 dark:text-slate-400">
+                    {item.durationMs}ms • {item.engineVersion}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}

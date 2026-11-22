@@ -17,17 +17,17 @@ Your last `/simc` profile is automatically remembered in `localStorage` (with a 
 ## Features & Tools
 
 - **Quick Sim (`/quick-sim`)** — Run Patchwerk single-target simulations with configurable fight length and iterations, one-click preset pills (`60s`/`180s`/`300s`, `500`/`1000`/`5000`), `Ctrl+Enter` shortcut, and a live progress bar. Includes:
-  - DPS headline, standard deviation, min/max, **Copy Summary** for Discord/chat, and **Download JSON** report export.
-  - **Sortable Damage Breakdown** table with share bars, average damage per fight, DPS, casts per fight, and crit %.
-  - **Buff & Debuff Uptime** table with uptime bars and proc counts.
+  - DPS headline, Min/Mean/Max visual spread bar, standard deviation, **Copy Summary** for Discord/chat, and **Download JSON** report export.
+  - **Sortable Damage Breakdown** table with share bars, average damage per fight, DPS, casts per fight, crit %, and one-click **Export CSV**.
+  - **Buff & Debuff Uptime** table with **All / Buff / Debuff** filter tabs, uptime bars, and proc counts.
   - **Sample Ability Log** timeline with full-log parsing, spell-name lookup, live ability filter, and a toggleable raw combat log view.
-  - **Recent Simulations** local history list so you can reopen previous runs.
+  - **Recent Simulations** local history list with DPS delta badges so you can reopen and compare previous runs.
 - **Top Gear (`/top-gear`)** — Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.
 - **Droptimizer (`/droptimizer`)** — Rank candidate item upgrades using verified engine item data.
 - **Gear Compare (`/gear-compare`)** — Compare two profiles side-by-side with plain-language statistical verdicts.
 - **Advanced Sim (`/advanced-sim`)** — Run validated `prepared_v2` JSON directly through the Rust/WASM coverage gate and engine.
 - **About (`/about`)** — Overview of how ForeverBots works, required addon info, and current engine limitations.
-- **WoW Forever Theme & Responsive UI** — Unified obsidian and gold styling, dark/light mode toggle, and a responsive mobile navigation menu.
+- **WoW Forever Theme & Responsive UI** — Unified obsidian and gold styling, dark/light mode toggle, dynamic page titles, scroll-to-top navigation, and a responsive mobile menu.
 
 ## Current Limitations
 

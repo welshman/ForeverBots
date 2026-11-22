@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import QuickSimPage from "./pages/QuickSimPage";
@@ -10,8 +10,24 @@ import AdvancedSimPage from "./pages/AdvancedSimPage";
 import AboutPage from "./pages/AboutPage";
 import { loadPreferences, savePreferences } from "./lib/storage";
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/": "ForeverBots — World of Warcraft Forever Simulator",
+  "/quick-sim": "Quick Sim — ForeverBots",
+  "/top-gear": "Top Gear — ForeverBots",
+  "/droptimizer": "Droptimizer — ForeverBots",
+  "/gear-compare": "Gear Compare — ForeverBots",
+  "/advanced-sim": "Advanced Sim — ForeverBots",
+  "/about": "About — ForeverBots",
+};
+
 export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => loadPreferences().theme);
+  const location = useLocation();
+
+  useEffect(() => {
+    document.title = ROUTE_TITLES[location.pathname] ?? "ForeverBots";
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [location.pathname]);
 
   useEffect(() => {
     const root = document.documentElement;
