@@ -177,7 +177,9 @@ export default function QuickSimPage() {
                 width:
                   progress.phase === "complete" || progress.phase === "failed"
                     ? "100%"
-                    : `${Math.max(12, Math.min(95, progress.percent ?? 50))}%`,
+                    : progress.phase === "running"
+                    ? "65%"
+                    : "25%",
               }}
             />
           </div>
