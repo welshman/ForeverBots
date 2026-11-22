@@ -92,20 +92,22 @@ export default function ReportView({ result }: { result: SimulationResult }) {
             <h2 className="text-xl font-bold">{details?.name ?? "Character"}</h2>
             <p className="text-xs uppercase tracking-wider text-slate-400">Quick Sim Result</p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div>
-            <button
-              type="button"
-              onClick={copySummary}
-              className="text-xs px-3 py-1 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors"
-            >
-              {copied ? "Copied!" : "Copy Summary"}
-            </button>
-          </div>
+          <div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div>
         </div>
         <p className="text-sm text-slate-400">Standard deviation: {result.statistics.stdDev?.toFixed(1) ?? "Unavailable"} | Minimum: {result.statistics.min?.toFixed(1) ?? "Unavailable"} | Maximum: {result.statistics.max?.toFixed(1) ?? "Unavailable"}</p>
-        <h3 className="font-semibold">Simulation Details</h3>
-        <p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold">Simulation Details</h3>
+            <p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p>
+          </div>
+          <button
+            type="button"
+            onClick={copySummary}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors shrink-0"
+          >
+            {copied ? "Copied!" : "Copy Summary"}
+          </button>
+        </div>
       </section>
       {!details && <p className="text-amber-400">Detailed output could not be parsed. Raw data is available below.</p>}
       {!!details?.actions.length && <section className={panel}><h3 className="font-semibold">Damage Breakdown</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Ability","%","Amount","Avg damage per fight","DPS (damage / avg duration)","Casts / fight","Crit %"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.actions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table></section>}
