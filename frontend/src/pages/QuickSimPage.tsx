@@ -12,6 +12,17 @@ import {
 const DURATION_PRESETS = [60, 180, 300] as const;
 const ITERATION_PRESETS = [500, 1000, 5000] as const;
 
+const PHASE_WIDTH: Record<SimulationProgress["phase"], string> = {
+  parsing: "15%",
+  "loading-assets": "30%",
+  preparing: "45%",
+  checking: "60%",
+  simulating: "80%",
+  complete: "100%",
+  failed: "100%",
+  cancelled: "100%",
+};
+
 export default function QuickSimPage() {
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [duration, setDuration] = useState(180);
@@ -20,7 +31,12 @@ export default function QuickSimPage() {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
 
-  const isRunning = Boolean(progress && progress.phase !== "complete" && progress.phase !== "failed");
+  const isRunning = Boolean(
+    progress &&
+      progress.phase !== "complete" &&
+      progress.phase !== "failed" &&
+      progress.phase !== "cancelled"
+  );
 
   const handleRun = async () => {
     if (!profile || profile.status === "unparseable" || isRunning) return;
@@ -171,16 +187,11 @@ export default function QuickSimPage() {
           <div className="h-2 rounded-full bg-slate-200 dark:bg-obsidian-950 overflow-hidden">
             <div
               className={`h-2 rounded-full transition-all duration-300 ${
-                progress.phase === "failed" ? "bg-rose-500" : "bg-gold-500"
+                progress.phase === "failed" || progress.phase === "cancelled"
+                  ? "bg-rose-500"
+                  : "bg-gold-500"
               }`}
-              style={{
-                width:
-                  progress.phase === "complete" || progress.phase === "failed"
-                    ? "100%"
-                    : progress.phase === "running"
-                    ? "65%"
-                    : "25%",
-              }}
+              style={{ width: PHASE_WIDTH[progress.phase] }}
             />
           </div>
         </div>
