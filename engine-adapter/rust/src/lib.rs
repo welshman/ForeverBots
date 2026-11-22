@@ -56,7 +56,9 @@ pub fn prepare_and_simulate_request_json(
         .pointer("/simOptions/iterations")
         .or_else(|| value.pointer("/sim_options/iterations"))
         .and_then(serde_json::Value::as_u64)
-        .ok_or_else(|| error("invalid_iterations: expected a positive integer in simOptions.iterations"))?;
+        .ok_or_else(|| {
+            error("invalid_iterations: expected a positive integer in simOptions.iterations")
+        })?;
     if !(1..=MAX_ITERATIONS).contains(&iterations) {
         return Err(error("iteration_limit: allowed range is 1..=10000"));
     }
