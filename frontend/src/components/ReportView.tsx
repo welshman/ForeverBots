@@ -11,7 +11,8 @@ const SPELL_NAMES: Record<number, string> = {
   687:"Demon Skin",696:"Demon Skin",706:"Demon Armor",1086:"Demon Armor",11733:"Demon Armor",11734:"Demon Armor",11735:"Demon Armor",
   3110:"Firebolt (Imp)",7799:"Firebolt (Imp)",7800:"Firebolt (Imp)",7801:"Firebolt (Imp)",7802:"Firebolt (Imp)",11762:"Firebolt (Imp)",11763:"Firebolt (Imp)",1311680:"Curse of Elements",
   116:"Frostbolt",25304:"Frostbolt",133:"Fireball",25306:"Fireball",2136:"Fire Blast",10199:"Fire Blast",2948:"Scorch",10207:"Scorch",25345:"Arcane Missiles",25346:"Arcane Missiles (Tick)",1239700:"Arcane Blast",12042:"Arcane Power",12043:"Presence of Mind",12051:"Evocation",
-  10947:"Mind Blast",10942:"Shadow Word: Pain",25298:"Starfire",9835:"Moonfire",15208:"Lightning Bolt",20904:"Aimed Shot",14290:"Multi-Shot",20271:"Judgement",11294:"Sinister Strike",31016:"Eviscerate",23894:"Bloodthirst",1680:"Whirlwind",25286:"Heroic Strike"
+  10947:"Mind Blast",10942:"Shadow Word: Pain",25298:"Starfire",9835:"Moonfire",15208:"Lightning Bolt",20904:"Aimed Shot",14290:"Multi-Shot",20271:"Judgement",11294:"Sinister Strike",31016:"Eviscerate",23894:"Bloodthirst",1680:"Whirlwind",25286:"Heroic Strike",
+  20572:"Blood Fury"
 };
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => v && typeof v === "object" && !Array.isArray(v) ? v as Obj : {};
