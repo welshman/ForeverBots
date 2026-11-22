@@ -21,6 +21,7 @@ const SPELL_NAMES: Record<number, string> = {
   20572:"Blood Fury",26297:"Berserking",23028:"Arcane Brilliance",21850:"Gift of the Wild",27681:"Prayer of Spirit",24907:"Moonkin Aura"
 };
 type Obj = Record<string, unknown>;
+type ActionSort = "damage" | "dps" | "casts" | "crit";
 const obj = (v: unknown): Obj => v && typeof v === "object" && !Array.isArray(v) ? v as Obj : {};
 const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 const num = (v: unknown): number => typeof v === "number" && Number.isFinite(v) ? v : 0;
@@ -41,6 +42,9 @@ const panel = "rounded-2xl border border-slate-200 dark:border-slate-800 bg-whit
 const cell = "py-2 px-2 text-left";
 export default function ReportView({ result }: { result: SimulationResult }) {
   const [copied, setCopied] = useState(false);
+  const [sortBy, setSortBy] = useState<ActionSort>("damage");
+  const [sortDesc, setSortDesc] = useState(true);
+
   const details = useMemo(() => {
     try {
       const outer = obj(JSON.parse(result.rawOutput));
@@ -69,6 +73,27 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       return {name:String(player.name ?? "Character"),iterations,duration,actions,total,auras,logs:typeof rep.logs === "string" ? rep.logs : ""};
     } catch { return null; }
   }, [result.rawOutput]);
+
+  const sortedActions = useMemo(() => {
+    if (!details) return [];
+    const dir = sortDesc ? -1 : 1;
+    return [...details.actions].sort((a, b) => {
+      const av = (sortBy === "damage" ? a.damage : sortBy === "dps" ? a.dps : sortBy === "casts" ? a.casts : a.crit) ?? -1;
+      const bv = (sortBy === "damage" ? b.damage : sortBy === "dps" ? b.dps : sortBy === "casts" ? b.casts : b.crit) ?? -1;
+      return (av - bv) * dir;
+    });
+  }, [details, sortBy, sortDesc]);
+
+  const toggleSort = (col: ActionSort) => {
+    if (sortBy === col) {
+      setSortDesc((d) => !d);
+    } else {
+      setSortBy(col);
+      setSortDesc(true);
+    }
+  };
+
+  const sortArrow = (col: ActionSort) => (sortBy === col ? (sortDesc ? " ↓" : " ↑") : "");
 
   const copySummary = () => {
     const top = details?.actions.slice(0, 3).map((a) => `${a.name} (${(100 * a.damage / (details.total || 1)).toFixed(1)}%)`).join(", ");
@@ -131,7 +156,15 @@ export default function ReportView({ result }: { result: SimulationResult }) {
         </div>
       </section>
       {!details && <p className="text-amber-400">Detailed output could not be parsed. Raw data is available below.</p>}
-      {!!details?.actions.length && <section className={panel}><h3 className="font-semibold">Damage Breakdown</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Ability","%","Amount","Avg damage per fight","DPS (damage / avg duration)","Casts / fight","Crit %"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.actions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table></section>}
+      {!!sortedActions.length && details && <section className={panel}><h3 className="font-semibold">Damage Breakdown</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">
+        <th className={cell}>Ability</th>
+        <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">%{sortArrow("damage")}</button></th>
+        <th className={cell}>Amount</th>
+        <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">Avg damage per fight{sortArrow("damage")}</button></th>
+        <th className={cell}><button type="button" onClick={() => toggleSort("dps")} className="hover:text-gold-400 transition-colors">DPS{sortArrow("dps")}</button></th>
+        <th className={cell}><button type="button" onClick={() => toggleSort("casts")} className="hover:text-gold-400 transition-colors">Casts / fight{sortArrow("casts")}</button></th>
+        <th className={cell}><button type="button" onClick={() => toggleSort("crit")} className="hover:text-gold-400 transition-colors">Crit %{sortArrow("crit")}</button></th>
+      </tr></thead><tbody>{sortedActions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table></section>}
       {!!details?.auras.length && <section className={panel}><h3 className="font-semibold">Buff &amp; Debuff Uptime</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Aura","Type","Uptime","Bar","Procs / Count"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.auras.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{a.kind}</td><td className={cell}>{a.pct.toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className="h-2 bg-gold-500" style={{width:`${a.pct}%`}} /></div></td><td className={cell}>{a.count.toFixed(1)}</td></tr>)}</tbody></table></section>}
       {details?.logs ? <AbilityTimeline key={result.jobId} logs={details.logs} names={SPELL_NAMES} /> : <p className="text-sm text-slate-400">No sample combat log was returned by the engine.</p>}
     </>}

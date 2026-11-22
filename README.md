@@ -4,27 +4,23 @@
 
 ForeverBots is a free, client-side WebAssembly combat simulator for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f`). It compiles the Rust engine to WebAssembly, runs simulations inside a dedicated browser Web Worker, and deploys directly to **GitHub Pages** with no backend or account required.
 
-## Demo
-
-https://welshman.github.io/ForeverBots/
-
 ## Required In-Game Addon
 
-ForeverBots imports character profiles from the **[SimulationCraft](https://www.curseforge.com/wow/addons/simulationcraft) Addon**:
+ForeverBots imports character profiles from the **SimulationCraft Addon**:
 
 1. Install the **SimulationCraft Addon** in-game.
 2. Type `/simc` and copy the generated text.
 3. Paste the output into the importer or upload a `.simc` / `.txt` file.
 
-For characters below Level 60, the importer displays **Character Sheet Calibration** fields (Health, Mana, Melee Crit %, Spell Crit %, and base attributes) so the engine can calibrate your level.
+Your last `/simc` profile is automatically remembered in `localStorage` (with a one-click **Clear** button). For characters below Level 60, the importer displays **Character Sheet Calibration** fields (Health, Mana, Melee Crit %, Spell Crit %, and base attributes) so the engine can calibrate your level.
 
 ## Features & Tools
 
-- **Quick Sim (`/quick-sim`)** — Run Patchwerk single-target simulations with configurable fight length and iterations. Includes:
-  - DPS headline, standard deviation, min/max, and one-click **Copy Summary** for Discord/chat.
-  - **Damage Breakdown** table with share bars, average damage per fight, DPS, casts per fight, and crit %.
+- **Quick Sim (`/quick-sim`)** — Run Patchwerk single-target simulations with configurable fight length and iterations, one-click preset pills (`60s`/`180s`/`300s`, `500`/`1000`/`5000`), `Ctrl+Enter` shortcut, and a live progress bar. Includes:
+  - DPS headline, standard deviation, min/max, **Copy Summary** for Discord/chat, and **Download JSON** report export.
+  - **Sortable Damage Breakdown** table with share bars, average damage per fight, DPS, casts per fight, and crit %.
   - **Buff & Debuff Uptime** table with uptime bars and proc counts.
-  - **Sample Ability Log** timeline with full-log parsing, spell-name lookup, and a toggleable raw combat log view.
+  - **Sample Ability Log** timeline with full-log parsing, spell-name lookup, live ability filter, and a toggleable raw combat log view.
   - **Recent Simulations** local history list so you can reopen previous runs.
 - **Top Gear (`/top-gear`)** — Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.
 - **Droptimizer (`/droptimizer`)** — Rank candidate item upgrades using verified engine item data.
@@ -59,10 +55,10 @@ npm run dev
 
 ## GitHub Pages Deployment
 
-1. Go to **Settings → Pages**.
+1. Go to **Settings → Pages** in `welshman/ForeverBots`.
 2. Set **Source** to **GitHub Actions**.
 3. Wait for **Build and Deploy to GitHub Pages** to complete.
-4. Open link.
+4. Open `https://welshman.github.io/ForeverBots/`.
 
 ## Disclaimer
 

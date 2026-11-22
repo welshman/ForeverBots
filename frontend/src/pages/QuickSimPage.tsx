@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SimcImporter from "../components/SimcImporter";
 import ReportView from "../components/ReportView";
 import { simulationRunner } from "../lib/engineAdapter";
@@ -20,8 +20,10 @@ export default function QuickSimPage() {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
 
+  const isRunning = Boolean(progress && progress.phase !== "complete" && progress.phase !== "failed");
+
   const handleRun = async () => {
-    if (!profile) return;
+    if (!profile || profile.status === "unparseable" || isRunning) return;
     const jobId = crypto.randomUUID();
     setResult(null);
     const res = await simulationRunner.run(
@@ -44,6 +46,17 @@ export default function QuickSimPage() {
     appendHistory(res);
     setHistory(loadHistory());
   };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleRun();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const clearHistory = () => {
     localStorage.removeItem("foreverbots:history:v1");
@@ -122,28 +135,52 @@ export default function QuickSimPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={!profile || profile.status === "unparseable"}
-          onClick={handleRun}
-          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
-        >
-          Run Quick Sim
-        </button>
-        {progress && progress.phase !== "complete" && progress.phase !== "failed" && (
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => simulationRunner.cancel()}
-            className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-500 transition-colors"
+            disabled={!profile || profile.status === "unparseable" || isRunning}
+            onClick={handleRun}
+            className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
           >
-            Cancel
+            {isRunning ? "Simulating..." : "Run Quick Sim"}
           </button>
-        )}
+          {isRunning ? (
+            <button
+              type="button"
+              onClick={() => simulationRunner.cancel()}
+              className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-500 transition-colors"
+            >
+              Cancel
+            </button>
+          ) : (
+            <span className="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">
+              Ctrl+Enter
+            </span>
+          )}
+        </div>
       </div>
 
       {progress && (
-        <div className="text-xs text-slate-400">
-          Phase: <span className="font-mono">{progress.phase}</span> — {progress.message}
+        <div className="rounded-2xl border border-slate-200 dark:border-gold-500/20 bg-white/85 dark:bg-obsidian-900/85 p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-mono uppercase tracking-wider text-gold-400">
+              {progress.phase}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400">{progress.message}</span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-200 dark:bg-obsidian-950 overflow-hidden">
+            <div
+              className={`h-2 rounded-full transition-all duration-300 ${
+                progress.phase === "failed" ? "bg-rose-500" : "bg-gold-500"
+              }`}
+              style={{
+                width:
+                  progress.phase === "complete" || progress.phase === "failed"
+                    ? "100%"
+                    : `${Math.max(12, Math.min(95, progress.percent ?? 50))}%`,
+              }}
+            />
+          </div>
         </div>
       )}
 
