@@ -1,7 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SimcImporter from "../components/SimcImporter";
 import ReportView from "../components/ReportView";
 import { simulationRunner } from "../lib/engineAdapter";
+import {
+  compareResults,
+  exportResultToCsv,
+  exportResultToMarkdown,
+  summarizeResult,
+  validateProfilePreflight,
+} from "../lib/resultInsights";
+import {
+  deleteSavedProfile,
+  duplicateSavedProfile,
+  loadSavedProfiles,
+  SavedProfile,
+  saveProfile,
+} from "../lib/savedProfiles";
 import { appendHistory, loadHistory } from "../lib/storage";
 import { ParsedSimcProfile, SimulationProgress, SimulationResult } from "../types/simulation";
 
@@ -14,7 +28,7 @@ const PHASE_WIDTH: Record<SimulationProgress["phase"], string> = {
 };
 const panel = "rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4";
 const inputClass = "w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/70";
-const secondary = "text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-gold-500/60 transition-colors";
+const secondary = "text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-gold-500/60 focus:outline-none focus:ring-2 focus:ring-gold-500/60 transition-colors";
 const limits: Record<keyof Options, [number, number]> = {
   duration: [1, 600], iterations: [1, 10000], variancePct: [0, 50], latencyMs: [0, 500], seed: [1, 2147483647],
 };
@@ -38,15 +52,26 @@ function loadOptions(): Options {
 
 export default function QuickSimPage() {
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
+  const [importerKey, setImporterKey] = useState(0);
   const [options, setOptions] = useState<Options>(loadOptions);
   const [advanced, setAdvanced] = useState(false);
   const [progress, setProgress] = useState<SimulationProgress | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [compareBaseline, setCompareBaseline] = useState<SimulationResult | null>(null);
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>(() => loadSavedProfiles());
+  const [profileName, setProfileName] = useState("");
   const [running, setRunning] = useState(false);
   const busy = useRef(false);
   const [message, setMessage] = useState("");
   const validOptions = (Object.keys(DEFAULTS) as (keyof Options)[]).every(key => valid(key, options[key]));
+
+  const preflightIssues = useMemo(() => validateProfilePreflight(profile), [profile]);
+  const insights = useMemo(() => (result?.ok ? summarizeResult(result, options.iterations) : null), [result, options.iterations]);
+  const comparison = useMemo(
+    () => (result && compareBaseline && result.jobId !== compareBaseline.jobId ? compareResults(compareBaseline, result, options.iterations) : null),
+    [result, compareBaseline, options.iterations]
+  );
 
   useEffect(() => {
     if (!validOptions) return;
@@ -91,12 +116,42 @@ export default function QuickSimPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
-  const copyRaw = async (label: string, text: string) => {
+  const copyText = async (label: string, text: string) => {
     try {
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(text);
       setMessage(`${label} copied.`);
-    } catch { setMessage("Copy failed. Select and copy the text in the raw report section manually."); }
+    } catch { setMessage(`Could not copy ${label}. Your browser may block clipboard access.`); }
+  };
+
+  const downloadCsv = () => {
+    if (!result) return;
+    const csv = exportResultToCsv(result, options.iterations);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `foreverbots-quicksim-${result.jobId.slice(0, 8)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage("CSV report downloaded.");
+  };
+
+  const handleSaveProfile = () => {
+    if (!profile || !profile.rawText.trim()) return;
+    try {
+      setSavedProfiles(saveProfile(profileName || profile.characterName, profile));
+      setProfileName("");
+      setMessage("Profile saved locally.");
+    } catch { setMessage("Could not save profile to browser storage."); }
+  };
+
+  const handleLoadSaved = (saved: SavedProfile) => {
+    try {
+      localStorage.setItem("foreverbots:last_simc:v1", saved.rawText);
+      setImporterKey(k => k + 1);
+      setMessage(`Loaded saved profile "${saved.name}".`);
+    } catch { setMessage("Could not load saved profile."); }
   };
 
   const field = (key: keyof Options, label: string, presets: readonly number[] = []) => (
@@ -120,7 +175,60 @@ export default function QuickSimPage() {
     <div><h1 className="text-2xl font-bold">Quick Sim</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400">Patchwerk single-target simulation executed in a dedicated Web Worker.</p>
     </div>
-    <SimcImporter onParsed={setProfile} />
+
+    <SimcImporter key={importerKey} onParsed={setProfile} />
+
+    {preflightIssues.length > 0 && (
+      <section className={panel} aria-label="Pre-flight profile validation">
+        <h2 className="text-sm font-semibold">Profile Pre-Flight Check</h2>
+        <ul className="space-y-1.5 text-xs">
+          {preflightIssues.map((issue, idx) => (
+            <li key={idx} className={issue.severity === "error" ? "text-rose-500" : "text-amber-500"}>
+              {issue.severity === "error" ? "Error: " : "Warning: "}{issue.message}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section className={panel} aria-label="Saved profiles library">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Saved Profiles</h2>
+        {profile && profile.rawText.trim() && (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              aria-label="Profile name"
+              placeholder={profile.characterName || "Profile name"}
+              value={profileName}
+              onChange={e => setProfileName(e.target.value)}
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
+            />
+            <button type="button" onClick={handleSaveProfile} className={secondary}>Save Current</button>
+          </div>
+        )}
+      </div>
+      {savedProfiles.length === 0 ? (
+        <p className="text-xs text-slate-500 dark:text-slate-400">No saved profiles yet. Paste a /simc profile above and click Save Current to store it locally.</p>
+      ) : (
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {savedProfiles.map(saved => (
+            <div key={saved.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div>
+                <span className="font-medium text-slate-800 dark:text-slate-100">{saved.name}</span>
+                <span className="ml-2 text-slate-500">{saved.className} {saved.spec} (Lv {saved.level})</span>
+              </div>
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => handleLoadSaved(saved)} className={secondary}>Load</button>
+                <button type="button" onClick={() => setSavedProfiles(duplicateSavedProfile(saved.id))} className={secondary}>Duplicate</button>
+                <button type="button" onClick={() => setSavedProfiles(deleteSavedProfile(saved.id))} className="text-xs px-2 py-1 rounded-lg text-rose-400 hover:bg-rose-500/10">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
     <section className={panel} aria-label="Simulation settings">
       <div className="grid gap-5 sm:grid-cols-2">
         {field("duration", "Fight Length (s)", [60, 180, 300])}
@@ -129,12 +237,12 @@ export default function QuickSimPage() {
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void handleRun()}
           disabled={!profile || profile.status === "unparseable" || running || !validOptions}
-          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50">
+          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:opacity-50">
           {running ? "Simulating..." : "Run Quick Sim"}
         </button>
         {running ? <button type="button" onClick={() => simulationRunner.cancel()}
-          className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm">Cancel (Esc)</button>
-          : <span className="text-xs text-slate-500">Ctrl/Cmd+Enter</span>}
+          className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
+          : <span className="text-xs text-slate-500">Shortcut: Ctrl/Cmd+Enter</span>}
         <button type="button" aria-expanded={advanced} aria-controls="quick-more-options"
           onClick={() => setAdvanced(value => !value)} className={secondary}>{advanced ? "Hide Options" : "More Options"}</button>
       </div>
@@ -148,37 +256,95 @@ export default function QuickSimPage() {
       </div>}
       {!validOptions && <p role="alert" className="text-sm text-rose-500">Use whole numbers within the field limits: fight length 1–600, iterations 1–10000, variance 0–50, latency 0–500, seed 1–2147483647.</p>}
     </section>
+
     {progress && <div className={panel} role="status">
       <div className="flex flex-wrap justify-between gap-2 text-xs"><span className="uppercase text-gold-400">{progress.phase}</span><span>{progress.message}</span></div>
       <div className="h-2 rounded-full bg-slate-200 dark:bg-obsidian-950 overflow-hidden">
         <div className={`h-2 transition-all ${progress.phase === "failed" || progress.phase === "cancelled" ? "bg-rose-500" : "bg-gold-500"}`} style={{ width: PHASE_WIDTH[progress.phase] }} />
       </div>
     </div>}
+
     <p role="status" aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
+
     {result && <>
       <ReportView result={result} />
-      <div className="flex flex-wrap gap-2" aria-label="Copy raw report data">
-        <button type="button" className={secondary} onClick={() => void copyRaw("Raw Input", result.rawInput)}>Copy Raw Input</button>
-        <button type="button" className={secondary} onClick={() => void copyRaw("Raw Engine Output", result.rawOutput)}>Copy Raw Engine Output</button>
+
+      {insights && (
+        <section className={panel} aria-label="Simulation result insights">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">{insights.headline}</h2>
+            {insights.ci && (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                insights.ci.stability === "stable"
+                  ? "bg-emerald-500/15 text-emerald-500"
+                  : insights.ci.stability === "moderate"
+                    ? "bg-amber-500/15 text-amber-500"
+                    : "bg-rose-500/15 text-rose-500"
+              }`}>
+                {insights.ci.stability === "stable" ? "Stable" : insights.ci.stability === "moderate" ? "Moderate variance" : "High variance"}
+              </span>
+            )}
+          </div>
+          <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+            {insights.notes.map((note, idx) => <li key={idx}>{note}</li>)}
+            {insights.warnings.map((warn, idx) => <li key={`w-${idx}`} className="text-amber-500">{warn}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {comparison && (
+        <section className={panel} aria-label="Run comparison verdict">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Comparison vs Selected Baseline</h2>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                comparison.verdict === "clear-upgrade"
+                  ? "bg-emerald-500/15 text-emerald-500"
+                  : comparison.verdict === "clear-downgrade"
+                    ? "bg-rose-500/15 text-rose-500"
+                    : "bg-slate-500/15 text-slate-400"
+              }`}>
+                {comparison.label}
+              </span>
+              <button type="button" onClick={() => setCompareBaseline(null)} className="text-xs text-slate-400 hover:text-slate-200">Clear</button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300">{comparison.explanation}</p>
+        </section>
+      )}
+
+      <div className="flex flex-wrap gap-2" aria-label="Export and copy report data">
+        <button type="button" className={secondary} onClick={() => void copyText("Markdown summary", exportResultToMarkdown(result, options.iterations))}>Copy Markdown</button>
+        <button type="button" className={secondary} onClick={downloadCsv}>Export CSV</button>
+        <button type="button" className={secondary} onClick={() => void copyText("Raw Input", result.rawInput)}>Copy Raw Input</button>
+        <button type="button" className={secondary} onClick={() => void copyText("Raw Engine Output", result.rawOutput)}>Copy Raw Engine Output</button>
       </div>
     </>}
-    {history.length > 0 && <section className={panel}>
+
+    {history.length > 0 && <section className={panel} aria-label="Recent simulations">
       <div className="flex justify-between items-center gap-2"><h2 className="text-sm font-semibold">Recent Simulations</h2>
         <button type="button" className="text-xs text-slate-400 hover:text-rose-400" onClick={() => {
-          try { localStorage.removeItem("foreverbots:history:v1"); setHistory([]); }
+          try { localStorage.removeItem("foreverbots:history:v1"); setHistory([]); setCompareBaseline(null); }
           catch { setMessage("Browser history could not be cleared."); }
         }}>Clear history</button>
       </div>
       <div className="divide-y divide-slate-200 dark:divide-slate-800">{history.slice(0, 8).map(item => {
         const selected = result?.jobId === item.jobId;
+        const isBaseline = compareBaseline?.jobId === item.jobId;
         const delta = result?.ok && item.ok && result.dps !== undefined && item.dps !== undefined && !selected ? item.dps - result.dps : null;
-        return <button key={item.jobId} type="button" onClick={() => setResult(item)} aria-pressed={selected}
-          className={`w-full py-2.5 px-2 flex flex-wrap justify-between items-center gap-2 text-left text-xs rounded-lg ${selected ? "bg-gold-500/10 text-gold-400" : "hover:bg-slate-100 dark:hover:bg-obsidian-950"}`}>
-          <span>{item.ok && item.dps !== undefined ? `${item.dps.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS` : "Failed / Refused"}
-            {delta !== null && <span className={`ml-2 font-mono ${delta >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{delta >= 0 ? "+" : ""}{delta.toFixed(1)}</span>}
-          </span>
-          <span className="text-slate-500">{item.durationMs}ms • {item.engineVersion}</span>
-        </button>;
+        return <div key={item.jobId} className={`py-2 px-2 flex flex-wrap justify-between items-center gap-2 text-xs rounded-lg ${selected ? "bg-gold-500/10 text-gold-400" : "hover:bg-slate-100 dark:hover:bg-obsidian-950"}`}>
+          <button type="button" onClick={() => setResult(item)} aria-pressed={selected} className="text-left flex-1">
+            <span>{item.ok && item.dps !== undefined ? `${item.dps.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS` : "Failed / Refused"}
+              {delta !== null && <span className={`ml-2 font-mono ${delta >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{delta >= 0 ? "+" : ""}{delta.toFixed(1)}</span>}
+            </span>
+            <span className="ml-2 text-slate-500">{item.durationMs}ms • {item.engineVersion}</span>
+          </button>
+          {result && !selected && item.ok && (
+            <button type="button" onClick={() => setCompareBaseline(isBaseline ? null : item)} className={`${secondary} ${isBaseline ? "border-gold-500/60 text-gold-400" : ""}`}>
+              {isBaseline ? "Baseline" : "Compare"}
+            </button>
+          )}
+        </div>;
       })}</div>
     </section>}
   </div>;
