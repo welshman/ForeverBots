@@ -4,9 +4,13 @@
 
 ForeverBots is a free, client-side WebAssembly combat simulator for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f`). It compiles the Rust engine to WebAssembly, runs simulations inside a dedicated browser Web Worker, and deploys directly to **GitHub Pages** with no backend or account required.
 
+## Demo
+
+https://welshman.github.io/ForeverBots/
+
 ## Required In-Game Addon
 
-ForeverBots imports character profiles from the **SimulationCraft Addon**:
+ForeverBots imports character profiles from the **[SimulationCraft](https://www.curseforge.com/wow/addons/simulationcraft) Addon**:
 
 1. Install the **SimulationCraft Addon** in-game.
 2. Type `/simc` and copy the generated text.
@@ -55,10 +59,10 @@ npm run dev
 
 ## GitHub Pages Deployment
 
-1. Go to **Settings → Pages** in `welshman/ForeverBots`.
+1. Go to **Settings → Pages**.
 2. Set **Source** to **GitHub Actions**.
 3. Wait for **Build and Deploy to GitHub Pages** to complete.
-4. Open `https://welshman.github.io/ForeverBots/`.
+4. Open link.
 
 ## Disclaimer
 
