@@ -22,6 +22,7 @@ const SPELL_NAMES: Record<number, string> = {
 };
 type Obj = Record<string, unknown>;
 type ActionSort = "damage" | "dps" | "casts" | "crit";
+type AuraFilter = "All" | "Buff" | "Debuff";
 const obj = (v: unknown): Obj => v && typeof v === "object" && !Array.isArray(v) ? v as Obj : {};
 const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 const num = (v: unknown): number => typeof v === "number" && Number.isFinite(v) ? v : 0;
@@ -44,6 +45,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
   const [copied, setCopied] = useState(false);
   const [sortBy, setSortBy] = useState<ActionSort>("damage");
   const [sortDesc, setSortDesc] = useState(true);
+  const [auraFilter, setAuraFilter] = useState<AuraFilter>("All");
 
   const details = useMemo(() => {
     try {
@@ -66,7 +68,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
         return [{name:(index ? `${String(unit.name ?? "Pet")}: ` : "") + label(metric,key),damage,dps:duration > 0 ? damage/duration : undefined,casts:sum("casts")/iterations,crit:landed > 0 ? 100*sum("crits")/landed : undefined,color:colors[num(metric.spellSchool)] ?? "bg-indigo-400"}];
       })).sort((a,b) => b.damage-a.damage);
       const total = actions.reduce((sum,a) => sum+a.damage,0);
-      const auras = [{unit:player,kind:"Buff"},{unit:target,kind:"Debuff"}].flatMap(({unit,kind}) => entries(unit.auras).flatMap(([key,m]) => {
+      const auras = [{unit:player,kind:"Buff" as const},{unit:target,kind:"Debuff" as const}].flatMap(({unit,kind}) => entries(unit.auras).flatMap(([key,m]) => {
         const seconds = num(m.uptimeSecondsAvg);
         return seconds > 0 && duration > 0 ? [{name:label(m,key),kind,pct:Math.min(100,100*seconds/duration),count:num(m.procsAvg)}] : [];
       })).sort((a,b) => b.pct-a.pct);
@@ -83,6 +85,11 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       return (av - bv) * dir;
     });
   }, [details, sortBy, sortDesc]);
+
+  const filteredAuras = useMemo(() => {
+    if (!details) return [];
+    return auraFilter === "All" ? details.auras : details.auras.filter((a) => a.kind === auraFilter);
+  }, [details, auraFilter]);
 
   const toggleSort = (col: ActionSort) => {
     if (sortBy === col) {
@@ -121,6 +128,33 @@ export default function ReportView({ result }: { result: SimulationResult }) {
     URL.revokeObjectURL(url);
   };
 
+  const exportCsv = () => {
+    if (!details) return;
+    const header = "Ability,Share %,Avg Damage,DPS,Casts/Fight,Crit %";
+    const rows = sortedActions.map((a) => [
+      `"${a.name.replace(/"/g, '""')}"`,
+      (100 * a.damage / (details.total || 1)).toFixed(2),
+      a.damage.toFixed(1),
+      a.dps !== undefined ? a.dps.toFixed(1) : "",
+      a.casts.toFixed(2),
+      a.crit !== undefined ? a.crit.toFixed(1) : "",
+    ].join(","));
+    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `foreverbots-${details.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-breakdown.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const minDps = result.statistics.min;
+  const maxDps = result.statistics.max;
+  const meanPos =
+    minDps !== undefined && maxDps !== undefined && result.dps !== undefined && maxDps > minDps
+      ? Math.max(0, Math.min(100, ((result.dps - minDps) / (maxDps - minDps)) * 100))
+      : null;
+
   return <div className="space-y-6">
     {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>Simulation Refused or Failed</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
       <section className={panel}>
@@ -132,6 +166,19 @@ export default function ReportView({ result }: { result: SimulationResult }) {
           <div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div>
         </div>
         <p className="text-sm text-slate-400">Standard deviation: {result.statistics.stdDev?.toFixed(1) ?? "Unavailable"} | Minimum: {result.statistics.min?.toFixed(1) ?? "Unavailable"} | Maximum: {result.statistics.max?.toFixed(1) ?? "Unavailable"}</p>
+        {meanPos !== null && minDps !== undefined && maxDps !== undefined && (
+          <div className="space-y-1">
+            <div className="relative h-2 rounded-full bg-slate-200 dark:bg-obsidian-950 overflow-hidden">
+              <div className="absolute inset-y-0 left-0 bg-gold-500/35" style={{ width: `${meanPos}%` }} />
+              <div className="absolute top-0 bottom-0 w-1 bg-gold-400" style={{ left: `calc(${meanPos}% - 2px)` }} />
+            </div>
+            <div className="flex justify-between text-[11px] font-mono text-slate-500">
+              <span>Min {minDps.toFixed(1)}</span>
+              <span>Mean {result.dps?.toFixed(1)}</span>
+              <span>Max {maxDps.toFixed(1)}</span>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-1">
             <h3 className="font-semibold">Simulation Details</h3>
@@ -156,16 +203,49 @@ export default function ReportView({ result }: { result: SimulationResult }) {
         </div>
       </section>
       {!details && <p className="text-amber-400">Detailed output could not be parsed. Raw data is available below.</p>}
-      {!!sortedActions.length && details && <section className={panel}><h3 className="font-semibold">Damage Breakdown</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">
-        <th className={cell}>Ability</th>
-        <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">%{sortArrow("damage")}</button></th>
-        <th className={cell}>Amount</th>
-        <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">Avg damage per fight{sortArrow("damage")}</button></th>
-        <th className={cell}><button type="button" onClick={() => toggleSort("dps")} className="hover:text-gold-400 transition-colors">DPS{sortArrow("dps")}</button></th>
-        <th className={cell}><button type="button" onClick={() => toggleSort("casts")} className="hover:text-gold-400 transition-colors">Casts / fight{sortArrow("casts")}</button></th>
-        <th className={cell}><button type="button" onClick={() => toggleSort("crit")} className="hover:text-gold-400 transition-colors">Crit %{sortArrow("crit")}</button></th>
-      </tr></thead><tbody>{sortedActions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table></section>}
-      {!!details?.auras.length && <section className={panel}><h3 className="font-semibold">Buff &amp; Debuff Uptime</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Aura","Type","Uptime","Bar","Procs / Count"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.auras.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{a.kind}</td><td className={cell}>{a.pct.toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className="h-2 bg-gold-500" style={{width:`${a.pct}%`}} /></div></td><td className={cell}>{a.count.toFixed(1)}</td></tr>)}</tbody></table></section>}
+      {!!sortedActions.length && details && <section className={panel}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">Damage Breakdown</h3>
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
+          >
+            Export CSV
+          </button>
+        </div>
+        <table className="w-full text-sm"><thead><tr className="text-slate-400">
+          <th className={cell}>Ability</th>
+          <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">%{sortArrow("damage")}</button></th>
+          <th className={cell}>Amount</th>
+          <th className={cell}><button type="button" onClick={() => toggleSort("damage")} className="hover:text-gold-400 transition-colors">Avg damage per fight{sortArrow("damage")}</button></th>
+          <th className={cell}><button type="button" onClick={() => toggleSort("dps")} className="hover:text-gold-400 transition-colors">DPS{sortArrow("dps")}</button></th>
+          <th className={cell}><button type="button" onClick={() => toggleSort("casts")} className="hover:text-gold-400 transition-colors">Casts / fight{sortArrow("casts")}</button></th>
+          <th className={cell}><button type="button" onClick={() => toggleSort("crit")} className="hover:text-gold-400 transition-colors">Crit %{sortArrow("crit")}</button></th>
+        </tr></thead><tbody>{sortedActions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table>
+      </section>}
+      {!!details?.auras.length && <section className={panel}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">Buff &amp; Debuff Uptime</h3>
+          <div className="flex items-center gap-1">
+            {(["All", "Buff", "Debuff"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setAuraFilter(tab)}
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                  auraFilter === tab
+                    ? "border-gold-500/60 bg-gold-500/15 text-gold-400"
+                    : "border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-gold-500/40"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+        <table className="w-full text-sm"><thead><tr className="text-slate-400">{["Aura","Type","Uptime","Bar","Procs / Count"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{filteredAuras.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{a.kind}</td><td className={cell}>{a.pct.toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className="h-2 bg-gold-500" style={{width:`${a.pct}%`}} /></div></td><td className={cell}>{a.count.toFixed(1)}</td></tr>)}</tbody></table>
+      </section>}
       {details?.logs ? <AbilityTimeline key={result.jobId} logs={details.logs} names={SPELL_NAMES} /> : <p className="text-sm text-slate-400">No sample combat log was returned by the engine.</p>}
     </>}
     {!!result.warnings.length && <section className={panel}><h3>Warnings</h3>{result.warnings.map((w,i) => <p key={i} className="text-amber-400">[{w.code}] {w.message}</p>)}</section>}
