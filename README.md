@@ -2,7 +2,7 @@
 
 > **Simulate. Optimize. Master WoW Forever.**
 
-ForeverBots is a free, client-side WebAssembly combat simulator for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `375fd33d6c5745f9b4732dc4c6c72700d5c3fb2f`). It compiles the Rust engine to WebAssembly, runs simulations inside a dedicated browser Web Worker, and deploys directly to **GitHub Pages** with no backend or account required.
+ForeverBots is a free, client-side WebAssembly combat simulator for **World of Warcraft: Forever**, powered by the [MythicSim Forever Engine](https://github.com/sage3648/mythicsim-forever-engine) (pinned to commit `6aa0fdee7498a9c8aabb9b6cb2d7862d795db18e`). It compiles the Rust engine to WebAssembly, runs simulations inside a dedicated browser Web Worker, and deploys directly to **GitHub Pages** with no backend or account required.
 
 ## Required In-Game Addon
 
