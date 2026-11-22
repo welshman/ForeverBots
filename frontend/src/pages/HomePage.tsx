@@ -1,77 +1,95 @@
 import { Link } from "react-router-dom";
 
-const TOOLS = [
+const FAQ_ITEMS = [
   {
-    to: "/quick-sim",
-    title: "Quick Sim",
-    desc: "Import your /simc profile and run Patchwerk single-target simulations with full breakdowns.",
+    question: "How does ForeverBots simulate my character?",
+    answer: "ForeverBots parses your in-game /simc profile in the browser, prepares it for the MythicSim Forever engine, and runs the simulation locally in a WebAssembly Web Worker. No character data is uploaded to a server.",
   },
   {
-    to: "/top-gear",
-    title: "Top Gear",
-    desc: "Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.",
+    question: "Why do I need the SimulationCraft Addon?",
+    answer: "The SimulationCraft Addon generates the /simc profile text that ForeverBots imports. Without it, ForeverBots cannot read your character's gear, talents, or stats.",
   },
   {
-    to: "/droptimizer",
-    title: "Droptimizer",
-    desc: "Rank candidate upgrades transparently using verified engine item data.",
+    question: "What does 'Partially Unsupported' mean?",
+    answer: "It means your profile parsed successfully, but the engine's coverage gate flagged one or more unsupported items, talents, or mechanics. The simulation may still run, but results could be less accurate.",
   },
   {
-    to: "/gear-compare",
-    title: "Gear Compare",
-    desc: "Compare two profiles side-by-side with plain-language statistical verdicts.",
+    question: "What does 'Refused' mean?",
+    answer: "It means the engine's coverage gate blocked the simulation entirely because a required mechanic, item, or spec is not yet supported. This prevents misleading numbers rather than returning inaccurate results.",
   },
   {
-    to: "/advanced-sim",
-    title: "Advanced Sim",
-    desc: "Run validated prepared_v2 JSON directly through the Rust/WASM coverage gate and engine.",
+    question: "Why do my DPS numbers differ from other simulators?",
+    answer: "ForeverBots uses the MythicSim Forever engine, which is tailored to WoW Forever's specific patch and mechanics. Results can differ from retail-focused simulators like Raidbots because the underlying engine and game data are different.",
   },
   {
-    to: "/about",
-    title: "About ForeverBots",
-    desc: "Learn how the simulator works, which addon to use, and current engine capabilities.",
+    question: "Is my data stored anywhere?",
+    answer: "No. Everything runs client-side in your browser. Your /simc profile, simulation results, and preferences are stored only in your browser's localStorage and never sent to a server.",
   },
 ];
 
 export default function HomePage() {
   return (
     <div className="space-y-10">
-      <section className="text-center space-y-4 py-8 px-4 rounded-2xl border border-slate-200 dark:border-gold-500/20 bg-white/70 dark:bg-obsidian-900/70">
-        <span className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-gold-500/15 text-gold-500 border border-gold-500/30">
-          World of Warcraft Forever Simulator
-        </span>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gold-400">
+      <section className="text-center space-y-4 py-10">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gold-400">
           Simulate. Optimize. Master WoW Forever.
         </h1>
-        <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-300 text-sm sm:text-base">
-          ForeverBots compiles the Rust MythicSim Forever engine to WebAssembly and runs
-          coverage-gated combat simulations directly in your browser.
+        <p className="max-w-2xl mx-auto text-sm text-slate-500 dark:text-slate-400">
+          Free, client-side combat simulation for World of Warcraft: Forever, powered by the MythicSim Forever engine running entirely in your browser.
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Requires the <strong className="text-gold-500">SimulationCraft Addon (/simc)</strong> for
-          character imports.{" "}
-          <Link to="/about" className="text-gold-400 hover:underline">
-            Read more on the About page
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link
+            to="/quick-sim"
+            className="px-5 py-2.5 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 transition-colors"
+          >
+            Run a Quick Sim
           </Link>
-        </p>
+          <Link
+            to="/top-gear"
+            className="px-5 py-2.5 rounded-lg border border-gold-500/40 text-gold-400 text-sm font-semibold hover:bg-gold-500/10 transition-colors"
+          >
+            Explore Top Gear
+          </Link>
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {TOOLS.map((tool) => (
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { title: "Quick Sim", desc: "Run a fast Patchwerk single-target simulation with configurable fight length and iterations.", href: "/quick-sim" },
+          { title: "Top Gear", desc: "Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.", href: "/top-gear" },
+          { title: "Droptimizer", desc: "Rank candidate item upgrades using verified engine item data.", href: "/droptimizer" },
+          { title: "Gear Compare", desc: "Compare two profiles side-by-side with plain-language statistical verdicts.", href: "/gear-compare" },
+          { title: "Advanced Sim", desc: "Run validated prepared_v2 JSON directly through the Rust/WASM coverage gate and engine.", href: "/advanced-sim" },
+          { title: "About", desc: "Learn how ForeverBots works, required addon info, and current engine limitations.", href: "/about" },
+        ].map((card) => (
           <Link
-            key={tool.to}
-            to={tool.to}
-            className="group rounded-2xl border border-slate-200 dark:border-slate-800/90 bg-white/80 dark:bg-obsidian-900/80 p-6 hover:border-gold-500/60 hover:shadow-lg hover:shadow-gold-500/5 transition-all space-y-2"
+            key={card.title}
+            to={card.href}
+            className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-2 hover:border-gold-500/40 transition-colors"
           >
-            <h2 className="text-lg font-semibold group-hover:text-gold-400 transition-colors">
-              {tool.title}
-            </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              {tool.desc}
-            </p>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{card.title}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{card.desc}</p>
           </Link>
         ))}
       </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4">
+        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {FAQ_ITEMS.map((item) => (
+            <details key={item.question} className="py-3">
+              <summary className="cursor-pointer text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-gold-400 transition-colors">
+                {item.question}
+              </summary>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <footer className="text-center text-xs text-slate-500 dark:text-slate-400">
+        ForeverBots is an unofficial community project and is not affiliated with Blizzard Entertainment, the WoW Forever team, Raidbots, or MythicSim.
+      </footer>
     </div>
   );
 }

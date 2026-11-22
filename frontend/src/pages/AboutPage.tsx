@@ -1,100 +1,88 @@
 import { Link } from "react-router-dom";
 
+const FAQ_ITEMS = [
+  {
+    question: "How does ForeverBots simulate my character?",
+    answer: "ForeverBots parses your in-game /simc profile in the browser, prepares it for the MythicSim Forever engine, and runs the simulation locally in a WebAssembly Web Worker. No character data is uploaded to a server.",
+  },
+  {
+    question: "Why do I need the SimulationCraft Addon?",
+    answer: "The SimulationCraft Addon generates the /simc profile text that ForeverBots imports. Without it, ForeverBots cannot read your character's gear, talents, or stats.",
+  },
+  {
+    question: "What does 'Partially Unsupported' mean?",
+    answer: "It means your profile parsed successfully, but the engine's coverage gate flagged one or more unsupported items, talents, or mechanics. The simulation may still run, but results could be less accurate.",
+  },
+  {
+    question: "What does 'Refused' mean?",
+    answer: "It means the engine's coverage gate blocked the simulation entirely because a required mechanic, item, or spec is not yet supported. This prevents misleading numbers rather than returning inaccurate results.",
+  },
+  {
+    question: "Why do my DPS numbers differ from other simulators?",
+    answer: "ForeverBots uses the MythicSim Forever engine, which is tailored to WoW Forever's specific patch and mechanics. Results can differ from retail-focused simulators like Raidbots because the underlying engine and game data are different.",
+  },
+  {
+    question: "Is my data stored anywhere?",
+    answer: "No. Everything runs client-side in your browser. Your /simc profile, simulation results, and preferences are stored only in your browser's localStorage and never sent to a server.",
+  },
+];
+
 export default function AboutPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <section className="rounded-2xl border border-gold-500/30 bg-white/80 dark:bg-obsidian-900/80 p-6 sm:p-8 space-y-3">
-        <span className="inline-block text-xs font-semibold uppercase tracking-widest text-gold-500">
-          About ForeverBots
-        </span>
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          Browser-Based Simulation for World of Warcraft Forever
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-          ForeverBots is a free, client-side combat simulator built for World of Warcraft Forever.
-          It compiles the Rust MythicSim Forever engine to WebAssembly and runs simulations
-          directly inside your browser using a Web Worker—no account, queue, or external server
-          required.
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold">About ForeverBots</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Free, client-side combat simulation for World of Warcraft: Forever.
         </p>
-      </section>
-
-      <section className="rounded-2xl border border-gold-500/40 bg-gold-500/10 p-6 space-y-2">
-        <h2 className="text-lg font-semibold text-gold-400">Required In-Game Addon</h2>
-        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-          ForeverBots uses exports from the <strong>SimulationCraft Addon</strong> (type{" "}
-          <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono text-xs">
-            /simc
-          </code>{" "}
-          in-game and copy the output).
-        </p>
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-obsidian-900/80 p-6 space-y-3">
-          <h2 className="text-lg font-semibold">Available Tools</h2>
-          <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-disc pl-5">
-            <li>
-              <Link to="/quick-sim" className="text-gold-500 hover:underline font-medium">
-                Quick Sim
-              </Link>{" "}
-              — Single-target Patchwerk simulation with DPS, damage breakdown, aura uptime, and a
-              readable sample ability log.
-            </li>
-            <li>
-              <Link to="/top-gear" className="text-gold-500 hover:underline font-medium">
-                Top Gear
-              </Link>{" "}
-              — Evaluate gear combinations with lock constraints and statistical uncertainty.
-            </li>
-            <li>
-              <Link to="/droptimizer" className="text-gold-500 hover:underline font-medium">
-                Droptimizer
-              </Link>{" "}
-              — Rank candidate item upgrades using engine item data.
-            </li>
-            <li>
-              <Link to="/gear-compare" className="text-gold-500 hover:underline font-medium">
-                Gear Compare
-              </Link>{" "}
-              — Compare two profiles side-by-side with plain-language statistical verdicts.
-            </li>
-            <li>
-              <Link to="/advanced-sim" className="text-gold-500 hover:underline font-medium">
-                Advanced Sim
-              </Link>{" "}
-              — Run validated prepared_v2 JSON directly through the coverage gate and engine.
-            </li>
-          </ul>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-obsidian-900/80 p-6 space-y-3">
-          <h2 className="text-lg font-semibold">Current Limitations</h2>
-          <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-disc pl-5">
-            <li>Simulations currently focus on Patchwerk single-target encounters.</li>
-            <li>
-              Characters below Level 60 require manual Character Sheet calibration fields in the
-              importer.
-            </li>
-            <li>
-              Coverage-gated engine rules may refuse unsupported specs, items, or mechanics rather
-              than returning misleading numbers.
-            </li>
-            <li>
-              Some less common spell IDs in reports may still appear as{" "}
-              <code className="font-mono text-xs">Spell #ID</code> until added to the spell-name
-              map.
-            </li>
-          </ul>
-        </section>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-obsidian-900/80 p-6 space-y-2 text-xs text-slate-500 dark:text-slate-400">
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Disclaimer</h2>
-        <p>
-          ForeverBots is an unofficial community project and is not affiliated with Blizzard
-          Entertainment, the WoW Forever team, Raidbots, or MythicSim.
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
+        <h2 className="text-lg font-semibold">How It Works</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          ForeverBots runs the MythicSim Forever engine (a Rust-based combat simulator compiled to WebAssembly) entirely in your browser. Paste your /simc profile, and the engine simulates combat locally in a dedicated Web Worker — no backend, no account, no data upload.
         </p>
       </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
+        <h2 className="text-lg font-semibold">Required In-Game Addon</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Install the <strong>SimulationCraft Addon</strong> in-game, type <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono text-xs">/simc</code>, and paste the output into the importer on the Quick Sim page. For characters below Level 60, use the Character Sheet Calibration fields to help the engine calibrate your level.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4">
+        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {FAQ_ITEMS.map((item) => (
+            <details key={item.question} className="py-3 group">
+              <summary className="cursor-pointer text-sm font-medium text-slate-800 dark:text-slate-100 hover:text-gold-400 transition-colors">
+                {item.question}
+              </summary>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
+        <h2 className="text-lg font-semibold">Current Limitations</h2>
+        <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1.5 list-disc list-inside">
+          <li>Simulations currently focus on Patchwerk single-target encounters.</li>
+          <li>Characters below Level 60 require manual Character Sheet calibration fields.</li>
+          <li>Coverage-gated engine rules intentionally refuse unsupported specs, items, or mechanics rather than returning misleading numbers.</li>
+          <li>Some less common spell IDs in reports may still appear as Spell #ID until added to the spell-name map.</li>
+        </ul>
+      </section>
+
+      <div className="text-center">
+        <Link
+          to="/quick-sim"
+          className="inline-block px-5 py-2.5 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 transition-colors"
+        >
+          Run a Quick Sim
+        </Link>
+      </div>
     </div>
   );
 }

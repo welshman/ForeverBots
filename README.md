@@ -22,11 +22,15 @@ Your last `/simc` profile is automatically remembered in `localStorage` (with a 
   - **Buff & Debuff Uptime** table with **All / Buff / Debuff** filter tabs, uptime bars, and proc counts.
   - **Sample Ability Log** timeline with full-log parsing, spell-name lookup, live ability filter, and a toggleable raw combat log view.
   - **Recent Simulations** local history list with DPS delta badges so you can reopen and compare previous runs.
+  - **More Options** collapsible panel for Duration Variance (%), Latency (ms), and RNG Seed, all persisted in localStorage.
+  - **Escape-to-cancel** shortcut while a simulation is running.
+  - **Copy Raw Input / Copy Raw Engine Output** buttons for debugging or sharing exact engine payloads.
 - **Top Gear (`/top-gear`)** — Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.
 - **Droptimizer (`/droptimizer`)** — Rank candidate item upgrades using verified engine item data.
 - **Gear Compare (`/gear-compare`)** — Compare two profiles side-by-side with plain-language statistical verdicts.
 - **Advanced Sim (`/advanced-sim`)** — Run validated `prepared_v2` JSON directly through the Rust/WASM coverage gate and engine.
-- **About (`/about`)** — Overview of how ForeverBots works, required addon info, and current engine limitations.
+- **About (`/about`)** — Overview of how ForeverBots works, required addon info, FAQ, and current engine limitations.
+- **FAQ** — Six-question FAQ on both the homepage and About page covering how the simulator works, required addon, profile statuses, result differences, and data privacy.
 - **WoW Forever Theme & Responsive UI** — Unified obsidian and gold styling, dark/light mode toggle, dynamic page titles, scroll-to-top navigation, and a responsive mobile menu.
 
 ## Current Limitations
