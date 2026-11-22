@@ -23,9 +23,7 @@ export default function Navbar({ theme, onToggleTheme }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2.5 font-bold text-lg tracking-tight">
           <Sparkles className="w-5 h-5 text-gold-400" aria-hidden="true" />
-          <span className="bg-gradient-to-r from-gold-400 via-gold-300 to-arcane-400 bg-clip-text text-transparent">
-            ForeverBots
-          </span>
+          <span className="text-gold-400">ForeverBots</span>
         </Link>
 
         <nav aria-label="Primary" className="hidden md:flex items-center gap-1">

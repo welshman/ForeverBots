@@ -65,8 +65,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
         <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono">
           /simc
         </code>{" "}
-        to copy your profile. Exports from other addons (such as WoWSims Exporter, Pawn, or
-        SeventyUpgrades) will not work here.
+        to copy your profile.
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">

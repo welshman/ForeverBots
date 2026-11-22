@@ -25,8 +25,7 @@ export default function AboutPage() {
           <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono text-xs">
             /simc
           </code>{" "}
-          in-game and copy the output). Exports from other addons—such as WoWSims Exporter, Pawn,
-          or SeventyUpgrades—use different formats and will not work on this site.
+          in-game and copy the output).
         </p>
       </section>
 

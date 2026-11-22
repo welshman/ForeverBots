@@ -40,7 +40,7 @@ export default function HomePage() {
         <span className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-gold-500/15 text-gold-500 border border-gold-500/30">
           World of Warcraft Forever Simulator
         </span>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-gold-400 via-amber-200 to-arcane-400 bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-gold-400">
           Simulate. Optimize. Master WoW Forever.
         </h1>
         <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-300 text-sm sm:text-base">
@@ -50,7 +50,7 @@ export default function HomePage() {
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Requires the <strong className="text-gold-500">SimulationCraft Addon (/simc)</strong> for
           character imports.{" "}
-          <Link to="/about" className="text-arcane-400 hover:underline">
+          <Link to="/about" className="text-gold-400 hover:underline">
             Read more on the About page
           </Link>
         </p>
