@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SimulationResult } from "../types/simulation";
 import AbilityTimeline from "./AbilityTimeline";
 
@@ -10,9 +10,15 @@ const SPELL_NAMES: Record<number, string> = {
   1454:"Life Tap",1455:"Life Tap",1456:"Life Tap",11687:"Life Tap",11688:"Life Tap",11689:"Life Tap",
   687:"Demon Skin",696:"Demon Skin",706:"Demon Armor",1086:"Demon Armor",11733:"Demon Armor",11734:"Demon Armor",11735:"Demon Armor",
   3110:"Firebolt (Imp)",7799:"Firebolt (Imp)",7800:"Firebolt (Imp)",7801:"Firebolt (Imp)",7802:"Firebolt (Imp)",11762:"Firebolt (Imp)",11763:"Firebolt (Imp)",1311680:"Curse of Elements",
-  116:"Frostbolt",25304:"Frostbolt",133:"Fireball",25306:"Fireball",2136:"Fire Blast",10199:"Fire Blast",2948:"Scorch",10207:"Scorch",25345:"Arcane Missiles",25346:"Arcane Missiles (Tick)",1239700:"Arcane Blast",12042:"Arcane Power",12043:"Presence of Mind",12051:"Evocation",
-  10947:"Mind Blast",10942:"Shadow Word: Pain",25298:"Starfire",9835:"Moonfire",15208:"Lightning Bolt",20904:"Aimed Shot",14290:"Multi-Shot",20271:"Judgement",11294:"Sinister Strike",31016:"Eviscerate",23894:"Bloodthirst",1680:"Whirlwind",25286:"Heroic Strike",
-  20572:"Blood Fury"
+  116:"Frostbolt",25304:"Frostbolt",133:"Fireball",25306:"Fireball",2136:"Fire Blast",10199:"Fire Blast",2948:"Scorch",10207:"Scorch",25345:"Arcane Missiles",25346:"Arcane Missiles (Tick)",1239700:"Arcane Blast",12042:"Arcane Power",12043:"Presence of Mind",12051:"Evocation",11129:"Combustion",12536:"Clearcasting",
+  10947:"Mind Blast",10942:"Shadow Word: Pain",15473:"Shadowform",10060:"Power Infusion",
+  25298:"Starfire",9835:"Moonfire",29166:"Innervate",
+  15208:"Lightning Bolt",16166:"Elemental Mastery",16188:"Nature's Swiftness",
+  20904:"Aimed Shot",14290:"Multi-Shot",3045:"Rapid Fire",19574:"Bestial Wrath",
+  20271:"Judgement",20217:"Blessing of Kings",25898:"Greater Blessing of Kings",25918:"Greater Blessing of Wisdom",25782:"Greater Blessing of Might",
+  11294:"Sinister Strike",31016:"Eviscerate",13750:"Adrenaline Rush",13877:"Blade Flurry",
+  23894:"Bloodthirst",1680:"Whirlwind",25286:"Heroic Strike",12292:"Death Wish",1719:"Recklessness",
+  20572:"Blood Fury",26297:"Berserking",23028:"Arcane Brilliance",21850:"Gift of the Wild",27681:"Prayer of Spirit",24907:"Moonkin Aura"
 };
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => v && typeof v === "object" && !Array.isArray(v) ? v as Obj : {};
@@ -34,6 +40,7 @@ const colors: Record<number,string> = {1:"bg-amber-400",2:"bg-yellow-300",4:"bg-
 const panel = "rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3 overflow-x-auto";
 const cell = "py-2 px-2 text-left";
 export default function ReportView({ result }: { result: SimulationResult }) {
+  const [copied, setCopied] = useState(false);
   const details = useMemo(() => {
     try {
       const outer = obj(JSON.parse(result.rawOutput));
@@ -62,9 +69,44 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       return {name:String(player.name ?? "Character"),iterations,duration,actions,total,auras,logs:typeof rep.logs === "string" ? rep.logs : ""};
     } catch { return null; }
   }, [result.rawOutput]);
+
+  const copySummary = () => {
+    const top = details?.actions.slice(0, 3).map((a) => `${a.name} (${(100 * a.damage / (details.total || 1)).toFixed(1)}%)`).join(", ");
+    const text = [
+      `ForeverBots Quick Sim — ${details?.name ?? "Character"}`,
+      `DPS: ${result.dps?.toFixed(1) ?? "Unavailable"} (σ ${result.statistics.stdDev?.toFixed(1) ?? "—"})`,
+      `Fight: ${details?.duration ? `${details.duration.toFixed(1)}s` : "—"} | Iterations: ${details?.iterations || "—"}`,
+      top ? `Top Abilities: ${top}` : "",
+    ].filter(Boolean).join("\n");
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return <div className="space-y-6">
     {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>Simulation Refused or Failed</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
-      <section className={panel}><div className="flex flex-wrap justify-between gap-4"><div><h2 className="text-xl font-bold">{details?.name ?? "Character"}</h2><p className="text-xs uppercase tracking-wider text-slate-400">Quick Sim Result</p></div><div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div></div><p className="text-sm text-slate-400">Standard deviation: {result.statistics.stdDev?.toFixed(1) ?? "Unavailable"} | Minimum: {result.statistics.min?.toFixed(1) ?? "Unavailable"} | Maximum: {result.statistics.max?.toFixed(1) ?? "Unavailable"}</p><h3 className="font-semibold">Simulation Details</h3><p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p></section>
+      <section className={panel}>
+        <div className="flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <h2 className="text-xl font-bold">{details?.name ?? "Character"}</h2>
+            <p className="text-xs uppercase tracking-wider text-slate-400">Quick Sim Result</p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div>
+            <button
+              type="button"
+              onClick={copySummary}
+              className="text-xs px-3 py-1 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors"
+            >
+              {copied ? "Copied!" : "Copy Summary"}
+            </button>
+          </div>
+        </div>
+        <p className="text-sm text-slate-400">Standard deviation: {result.statistics.stdDev?.toFixed(1) ?? "Unavailable"} | Minimum: {result.statistics.min?.toFixed(1) ?? "Unavailable"} | Maximum: {result.statistics.max?.toFixed(1) ?? "Unavailable"}</p>
+        <h3 className="font-semibold">Simulation Details</h3>
+        <p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p>
+      </section>
       {!details && <p className="text-amber-400">Detailed output could not be parsed. Raw data is available below.</p>}
       {!!details?.actions.length && <section className={panel}><h3 className="font-semibold">Damage Breakdown</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Ability","%","Amount","Avg damage per fight","DPS (damage / avg duration)","Casts / fight","Crit %"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.actions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table></section>}
       {!!details?.auras.length && <section className={panel}><h3 className="font-semibold">Buff &amp; Debuff Uptime</h3><table className="w-full text-sm"><thead><tr className="text-slate-400">{["Aura","Type","Uptime","Bar","Procs / Count"].map(h => <th key={h} className={cell}>{h}</th>)}</tr></thead><tbody>{details.auras.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{a.kind}</td><td className={cell}>{a.pct.toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className="h-2 bg-gold-500" style={{width:`${a.pct}%`}} /></div></td><td className={cell}>{a.count.toFixed(1)}</td></tr>)}</tbody></table></section>}

@@ -36,6 +36,7 @@ export default function App() {
           <Route path="/gear-compare" element={<GearComparePage />} />
           <Route path="/advanced-sim" element={<AdvancedSimPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<HomePage />} />
         </Routes>
       </main>
       <footer className="border-t border-slate-200 dark:border-gold-500/15 py-6 text-center text-xs text-slate-500 dark:text-slate-400 px-4">

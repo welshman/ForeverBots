@@ -2,7 +2,7 @@ import { useState } from "react";
 import SimcImporter from "../components/SimcImporter";
 import ReportView from "../components/ReportView";
 import { simulationRunner } from "../lib/engineAdapter";
-import { appendHistory } from "../lib/storage";
+import { appendHistory, loadHistory } from "../lib/storage";
 import {
   ParsedSimcProfile,
   SimulationProgress,
@@ -15,6 +15,7 @@ export default function QuickSimPage() {
   const [iterations, setIterations] = useState(1000);
   const [progress, setProgress] = useState<SimulationProgress | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
 
   const handleRun = async () => {
     if (!profile) return;
@@ -38,6 +39,12 @@ export default function QuickSimPage() {
     );
     setResult(res);
     appendHistory(res);
+    setHistory(loadHistory());
+  };
+
+  const clearHistory = () => {
+    localStorage.removeItem("foreverbots:history:v1");
+    setHistory([]);
   };
 
   return (
@@ -100,6 +107,40 @@ export default function QuickSimPage() {
       )}
 
       {result && <ReportView result={result} />}
+
+      {history.length > 0 && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Recent Simulations</h2>
+            <button
+              type="button"
+              onClick={clearHistory}
+              className="text-xs text-slate-400 hover:text-rose-400 transition-colors"
+            >
+              Clear history
+            </button>
+          </div>
+          <div className="divide-y divide-slate-200 dark:divide-slate-800/70">
+            {history.slice(0, 8).map((item) => (
+              <button
+                key={item.jobId}
+                type="button"
+                onClick={() => setResult(item)}
+                className="w-full py-2.5 flex flex-wrap items-center justify-between gap-2 text-left text-xs hover:bg-slate-100/60 dark:hover:bg-obsidian-950/60 px-2 rounded-lg transition-colors"
+              >
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                  {item.ok && item.dps !== undefined
+                    ? `${item.dps.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS`
+                    : "Failed / Refused"}
+                </span>
+                <span className="font-mono text-slate-500 dark:text-slate-400">
+                  {item.durationMs}ms • {item.engineVersion}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
