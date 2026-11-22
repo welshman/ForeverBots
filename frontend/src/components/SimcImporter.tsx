@@ -23,6 +23,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
   const [text, setText] = useState("");
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [sheet, setSheet] = useState<CharacterSheetData>(DEFAULT_SHEET);
+  const [dragging, setDragging] = useState(false);
 
   const emitProfile = (baseProfile: ParsedSimcProfile, currentSheet: CharacterSheetData) => {
     const next: ParsedSimcProfile =
@@ -80,8 +81,28 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
     file.text().then(handleParse);
   };
 
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    file.text().then(handleParse);
+  };
+
   return (
-    <div className="space-y-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5">
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      className={`space-y-4 rounded-2xl border p-5 transition-colors ${
+        dragging
+          ? "border-dashed border-gold-400 bg-gold-500/10"
+          : "border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85"
+      }`}
+    >
       <div className="rounded-lg border border-gold-500/40 bg-gold-500/10 px-3.5 py-2.5 text-xs text-slate-700 dark:text-gold-300">
         <strong>Required Addon:</strong> Use the <strong>SimulationCraft Addon</strong> in-game and
         type{" "}
@@ -114,7 +135,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
         value={text}
         onChange={(e) => handleParse(e.target.value)}
         rows={8}
-        placeholder="Paste your WoW Forever /simc output from the SimulationCraft addon here..."
+        placeholder="Paste your WoW Forever /simc output here, or drag and drop a .simc / .txt file..."
         className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
       />
 
