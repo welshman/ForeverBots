@@ -1,1 +1,1 @@
-Replace the raid import with `import { foreverRaidSources } from "../data/foreverRaidSources";`
+Full DroptimizerPage implementation with corrected raid import: `import { foreverRaidSources } from "../data/foreverRaidSources";`
