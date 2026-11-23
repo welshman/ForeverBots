@@ -1,73 +1,192 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import SimcImporter from "../components/SimcImporter";
+import ForeverItemLink from "../components/ForeverItemLink";
 import { simulationRunner } from "../lib/engineAdapter";
+import { buildForeverRequestJson } from "../lib/requestBuilder";
+import {
+  foreverDungeonSources,
+  type ForeverDungeonItem,
+} from "../data/foreverDungeonSources";
+import {
+  simulationSlotsForForeverSlot,
+  type SimulationSlot,
+} from "../data/foreverSlotMapping";
 import { ParsedSimcProfile } from "../types/simulation";
 
-interface DropResult {
-  slot: string;
-  itemId: number;
+interface Candidate {
+  key: string;
+  item: ForeverDungeonItem;
+  targetSlot: SimulationSlot;
+}
+
+interface ResultRow {
+  candidate: Candidate;
   dps?: number;
   delta?: number;
+  gainPct?: number;
   error?: string;
 }
 
+const baseOptions = {
+  fightStyle: "Patchwerk" as const,
+  durationSeconds: 180,
+  durationVariancePct: 20,
+  targetCount: 1,
+  iterations: 500,
+  latencyMs: 100,
+  seed: 42,
+};
+
 export default function DroptimizerPage() {
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
-  const [candidateLines, setCandidateLines] = useState("main_hand=19356\nneck=18814");
+  const [dungeon, setDungeon] = useState("");
+  const [selected, setSelected] = useState<Record<string, SimulationSlot>>({});
+  const [manualLines, setManualLines] = useState("");
   const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<DropResult[]>([]);
+  const [progress, setProgress] = useState("");
+  const [results, setResults] = useState<ResultRow[]>([]);
 
-  const runDroptimizer = async () => {
-    if (!profile) return;
-    setRunning(true);
-    setResults([]);
-    const opts = {
-      fightStyle: "Patchwerk" as const,
-      durationSeconds: 180,
-      durationVariancePct: 20,
-      targetCount: 1,
-      iterations: 500,
-      latencyMs: 100,
-      seed: 42,
-    };
+  const dungeons = useMemo(
+    () => [...new Set(foreverDungeonSources.map((item) => item.dungeon))],
+    [],
+  );
 
-    const baseRes = await simulationRunner.run(
-      { jobId: crypto.randomUUID(), profile, options: opts },
-      () => {}
-    );
-    const baseDps = baseRes.ok ? baseRes.dps : undefined;
-    const rows: DropResult[] = [];
+  const items = useMemo(
+    () =>
+      foreverDungeonSources.filter((item) => item.dungeon === dungeon),
+    [dungeon],
+  );
 
-    for (const line of candidateLines.split("\n")) {
-      const [slot, idStr] = line.trim().split("=");
-      const itemId = Number(idStr);
-      if (!slot || !Number.isInteger(itemId) || itemId <= 0) continue;
+  const toggleItem = (item: ForeverDungeonItem) => {
+    const choices = simulationSlotsForForeverSlot(item.slot);
 
-      const swapped: ParsedSimcProfile = {
-        ...profile,
-        gear: [
-          ...profile.gear.filter((g) => g.slot !== slot),
-          { slot, itemId, raw: `id=${itemId}`, line: 0 },
-        ],
-      };
-      const res = await simulationRunner.run(
-        { jobId: crypto.randomUUID(), profile: swapped, options: opts },
-        () => {}
+    setSelected((previous) => {
+      const next = { ...previous };
+      const key = String(item.id);
+
+      if (next[key]) {
+        delete next[key];
+      } else if (choices.length === 1) {
+        next[key] = choices[0];
+      }
+
+      return next;
+    });
+  };
+
+  const buildCandidates = (): Candidate[] => {
+    const candidates: Candidate[] = [];
+
+    for (const item of items) {
+      const targetSlot = selected[String(item.id)];
+
+      if (!targetSlot) {
+        continue;
+      }
+
+      candidates.push({ key: String(item.id), item, targetSlot });
+    }
+
+    for (const line of manualLines.split("\n")) {
+      const [slot, rawId] = line.trim().split("=");
+      const itemId = Number(rawId);
+
+      if (!slot || !Number.isInteger(itemId) || itemId <= 0) {
+        continue;
+      }
+
+      const item = foreverDungeonSources.find(
+        (source) => source.id === itemId,
       );
-      rows.push({
-        slot,
-        itemId,
-        dps: res.ok ? res.dps : undefined,
-        delta:
-          res.ok && res.dps !== undefined && baseDps !== undefined
-            ? res.dps - baseDps
-            : undefined,
-        error: res.ok ? undefined : res.errors[0]?.message,
+
+      candidates.push({
+        key: `manual-${itemId}`,
+        item:
+          item ?? {
+            id: itemId,
+            name: `Item #${itemId}`,
+            dungeon: "Manual",
+            boss: null,
+            slot,
+            sourceUrl: "",
+          },
+        targetSlot: slot as SimulationSlot,
       });
     }
 
-    rows.sort((a, b) => (b.delta ?? -99999) - (a.delta ?? -99999));
-    setResults(rows);
+    return candidates;
+  };
+
+  const runDroptimizer = async () => {
+    if (!profile || running) {
+      return;
+    }
+
+    const candidates = buildCandidates();
+
+    if (candidates.length === 0) {
+      return;
+    }
+
+    setRunning(true);
+    setResults([]);
+
+    const baseResult = await simulationRunner.run(
+      { jobId: crypto.randomUUID(), profile, options: baseOptions },
+      () => {},
+    );
+    const baseDps = baseResult.ok ? baseResult.dps : undefined;
+    const rows: ResultRow[] = [];
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      setProgress(`Evaluating ${index + 1} of ${candidates.length}`);
+
+      const swappedProfile: ParsedSimcProfile = {
+        ...profile,
+        gear: [
+          ...profile.gear.filter(
+            (gear) => gear.slot !== candidate.targetSlot,
+          ),
+          {
+            slot: candidate.targetSlot,
+            itemId: candidate.item.id,
+            raw: `id=${candidate.item.id}`,
+            line: 0,
+          },
+        ],
+      };
+
+      buildForeverRequestJson(swappedProfile, baseOptions);
+
+      const result = await simulationRunner.run(
+        {
+          jobId: crypto.randomUUID(),
+          profile: swappedProfile,
+          options: baseOptions,
+        },
+        () => {},
+      );
+
+      const dps = result.ok ? result.dps : undefined;
+      const delta =
+        dps !== undefined && baseDps !== undefined ? dps - baseDps : undefined;
+
+      rows.push({
+        candidate,
+        dps,
+        delta,
+        gainPct:
+          delta !== undefined && baseDps
+            ? (100 * delta) / baseDps
+            : undefined,
+        error: result.ok ? undefined : result.errors[0]?.message,
+      });
+
+      setResults([...rows]);
+    }
+
+    setProgress("");
     setRunning(false);
   };
 
@@ -76,59 +195,147 @@ export default function DroptimizerPage() {
       <div>
         <h1 className="text-2xl font-bold">Droptimizer</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Evaluate candidate WoW Forever drops (slot=itemId, one per line) against your imported character.
+          Evaluate verified WoW Forever dungeon drops against your equipped profile.
         </p>
       </div>
 
       <SimcImporter onParsed={setProfile} />
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
-        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-          Candidate Drops (slot=itemId, one per line)
-        </label>
-        <textarea
-          value={candidateLines}
-          onChange={(e) => setCandidateLines(e.target.value)}
-          rows={5}
-          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
-        />
-        <button
-          type="button"
-          disabled={!profile || profile.status === "unparseable" || running}
-          onClick={runDroptimizer}
-          className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-4">
+        <h2 className="text-base font-semibold">Forever Dungeon Candidates</h2>
+
+        <select
+          value={dungeon}
+          onChange={(event) => {
+            setDungeon(event.target.value);
+            setSelected({});
+          }}
+          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-3 py-2 text-sm"
         >
-          {running ? "Evaluating Drops..." : "Run Droptimizer"}
-        </button>
-      </div>
+          <option value="">Select a verified Forever dungeon</option>
+          {dungeons.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+
+        {items.map((item) => {
+          const choices = simulationSlotsForForeverSlot(item.slot);
+          const chosen = selected[String(item.id)];
+
+          return (
+            <div
+              key={item.id}
+              className="flex flex-wrap items-center gap-3 py-2 border-b border-slate-800/50"
+            >
+              <input
+                type="checkbox"
+                checked={Boolean(chosen)}
+                onChange={() => toggleItem(item)}
+              />
+              <ForeverItemLink itemId={item.id} name={item.name} />
+              <span className="text-xs text-slate-500">{item.slot}</span>
+
+              {choices.length > 1 && (
+                <select
+                  value={chosen ?? ""}
+                  onChange={(event) =>
+                    setSelected((previous) => ({
+                      ...previous,
+                      [String(item.id)]: event.target.value as SimulationSlot,
+                    }))
+                  }
+                  className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2 py-1 text-xs"
+                >
+                  <option value="">Choose slot</option>
+                  {choices.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          );
+        })}
+
+        <details>
+          <summary className="cursor-pointer text-xs text-slate-500">
+            Advanced: manual slot=itemId
+          </summary>
+          <textarea
+            value={manualLines}
+            onChange={(event) => setManualLines(event.target.value)}
+            rows={3}
+            className="mt-2 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs"
+          />
+        </details>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={!profile || running}
+            onClick={runDroptimizer}
+            className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50"
+          >
+            {running ? "Evaluating..." : "Run Droptimizer"}
+          </button>
+          {running && (
+            <span className="text-xs text-slate-500">{progress}</span>
+          )}
+        </div>
+      </section>
 
       {results.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 overflow-auto">
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 overflow-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-800">
+            <thead className="text-xs text-slate-500 border-b border-slate-800">
               <tr>
-                <th className="py-2">Slot</th>
-                <th className="py-2">Item ID</th>
+                <th className="py-2">Item</th>
+                <th className="py-2">Dungeon</th>
+                <th className="py-2">Target Slot</th>
                 <th className="py-2">DPS</th>
                 <th className="py-2">Gain</th>
+                <th className="py-2">Gain %</th>
                 <th className="py-2">Status</th>
               </tr>
             </thead>
             <tbody>
-              {results.map((r, i) => (
-                <tr key={i} className="border-b border-slate-800/50">
-                  <td className="py-2">{r.slot}</td>
-                  <td className="py-2 font-mono">{r.itemId}</td>
-                  <td className="py-2 font-mono">{r.dps !== undefined ? r.dps.toFixed(1) : "—"}</td>
-                  <td className="py-2 font-mono">
-                    {r.delta !== undefined ? `${r.delta >= 0 ? "+" : ""}${r.delta.toFixed(1)}` : "—"}
+              {results.map((row) => (
+                <tr
+                  key={row.candidate.key}
+                  className="border-b border-slate-800/50"
+                >
+                  <td className="py-2">
+                    <ForeverItemLink
+                      itemId={row.candidate.item.id}
+                      name={row.candidate.item.name}
+                    />
                   </td>
-                  <td className="py-2 text-xs text-rose-400">{r.error ?? "OK"}</td>
+                  <td className="py-2">{row.candidate.item.dungeon}</td>
+                  <td className="py-2">{row.candidate.targetSlot}</td>
+                  <td className="py-2 font-mono">
+                    {row.dps !== undefined ? row.dps.toFixed(1) : "—"}
+                  </td>
+                  <td className="py-2 font-mono">
+                    {row.delta !== undefined
+                      ? `${row.delta >= 0 ? "+" : ""}${row.delta.toFixed(1)}`
+                      : "—"}
+                  </td>
+                  <td className="py-2 font-mono">
+                    {row.gainPct !== undefined
+                      ? `${row.gainPct >= 0 ? "+" : ""}${row.gainPct.toFixed(2)}%`
+                      : "—"}
+                  </td>
+                  <td className="py-2 text-xs text-rose-400">
+                    {row.error ?? "OK"}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </section>
       )}
     </div>
   );
