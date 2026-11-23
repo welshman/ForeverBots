@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import SimcImporter from "../components/SimcImporter";
 import ReportView from "../components/ReportView";
 import { simulationRunner } from "../lib/engineAdapter";
@@ -16,7 +17,7 @@ import {
   SavedProfile,
   saveProfile,
 } from "../lib/savedProfiles";
-import { appendHistory, loadHistory } from "../lib/storage";
+import { appendHistory, loadAdvancedDraft, loadHistory, saveAdvancedDraft } from "../lib/storage";
 import { ParsedSimcProfile, SimulationProgress, SimulationResult } from "../types/simulation";
 
 const OPTS_KEY = "foreverbots:quicksim_opts:v1";
@@ -51,10 +52,17 @@ function loadOptions(): Options {
 }
 
 export default function QuickSimPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [importerKey, setImporterKey] = useState(0);
   const [options, setOptions] = useState<Options>(loadOptions);
-  const [advanced, setAdvanced] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(() => new URLSearchParams(window.location.search).get("advanced") === "1");
+  const [advancedJson, setAdvancedJson] = useState(() => loadAdvancedDraft());
+  const [advancedRunning, setAdvancedRunning] = useState(false);
+  const [advancedProgress, setAdvancedProgress] = useState<SimulationProgress | null>(null);
+  const [advancedResult, setAdvancedResult] = useState<SimulationResult | null>(null);
+  const [advancedMessage, setAdvancedMessage] = useState("");
   const [progress, setProgress] = useState<SimulationProgress | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [compareBaseline, setCompareBaseline] = useState<SimulationResult | null>(null);
@@ -65,6 +73,14 @@ export default function QuickSimPage() {
   const busy = useRef(false);
   const [message, setMessage] = useState("");
   const validOptions = (Object.keys(DEFAULTS) as (keyof Options)[]).every(key => valid(key, options[key]));
+
+  const toggleAdvanced = (next: boolean) => {
+    setShowAdvanced(next);
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set("advanced", "1");
+    else params.delete("advanced");
+    setSearchParams(params, { replace: true });
+  };
 
   const preflightIssues = useMemo(() => validateProfilePreflight(profile), [profile]);
   const insights = useMemo(() => (result?.ok ? summarizeResult(result, options.iterations) : null), [result, options.iterations]);
@@ -99,6 +115,45 @@ export default function QuickSimPage() {
     } finally {
       busy.current = false;
       setRunning(false);
+    }
+  };
+
+  const handleRunAdvanced = async () => {
+    if (!advancedJson.trim() || advancedRunning) return;
+    setAdvancedRunning(true);
+    setAdvancedResult(null);
+    setAdvancedMessage("");
+    try {
+      const response = await simulationRunner.run({
+        jobId: crypto.randomUUID(),
+        profile: {
+          characterName: "Advanced",
+          className: "mage",
+          spec: "frost",
+          level: 60,
+          race: "gnome",
+          gear: [],
+          rawText: advancedJson,
+          status: "supported",
+          issues: [],
+        },
+        options: {
+          fightStyle: "Patchwerk",
+          durationSeconds: 180,
+          durationVariancePct: 20,
+          targetCount: 1,
+          iterations: 1000,
+          latencyMs: 50,
+          seed: 1,
+          preparedJsonOverride: advancedJson,
+        },
+      }, setAdvancedProgress);
+      setAdvancedResult(response);
+    } catch (error) {
+      setAdvancedMessage(error instanceof Error ? error.message : "Advanced simulation failed. Please try again.");
+    } finally {
+      setAdvancedRunning(false);
+      setAdvancedProgress(null);
     }
   };
 
@@ -243,10 +298,10 @@ export default function QuickSimPage() {
         {running ? <button type="button" onClick={() => simulationRunner.cancel()}
           className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
           : <span className="text-xs text-slate-500">Shortcut: Ctrl/Cmd+Enter</span>}
-        <button type="button" aria-expanded={advanced} aria-controls="quick-more-options"
-          onClick={() => setAdvanced(value => !value)} className={secondary}>{advanced ? "Hide Options" : "More Options"}</button>
+        <button type="button" aria-expanded={showMoreOptions} aria-controls="quick-more-options"
+          onClick={() => setShowMoreOptions(value => !value)} className={secondary}>{showMoreOptions ? "Hide Options" : "More Options"}</button>
       </div>
-      {advanced && <div id="quick-more-options" className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
+      {showMoreOptions && <div id="quick-more-options" className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
         <div className="grid gap-4 sm:grid-cols-3">
           {field("variancePct", "Duration Variance (%)")}
           {field("latencyMs", "Latency (ms)")}
@@ -255,6 +310,30 @@ export default function QuickSimPage() {
         <p className="text-xs text-slate-500 dark:text-slate-400">Settings are remembered in this browser. Keep the same seed and encounter settings when comparing runs.</p>
       </div>}
       {!validOptions && <p role="alert" className="text-sm text-rose-500">Use whole numbers within the field limits: fight length 1–600, iterations 1–10000, variance 0–50, latency 0–500, seed 1–2147483647.</p>}
+    </section>
+
+    <section className={panel} aria-labelledby="advanced-json-heading">
+      <button type="button" aria-expanded={showAdvanced} aria-controls="advanced-json-panel" onClick={() => toggleAdvanced(!showAdvanced)} className="flex w-full items-center justify-between gap-3 text-left">
+        <div>
+          <h2 id="advanced-json-heading" className="text-base font-semibold">Advanced: Prepared JSON</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Run a MythicSim Forever prepared_v2 JSON payload directly. This is separate from the imported /simc profile.</p>
+        </div>
+        <span aria-hidden="true" className="text-gold-400">{showAdvanced ? "−" : "+"}</span>
+      </button>
+
+      {showAdvanced && (
+        <div id="advanced-json-panel" className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <label htmlFor="advanced-json" className="block text-xs text-slate-500 dark:text-slate-400">Prepared_v2 JSON payload</label>
+          <textarea id="advanced-json" rows={14} value={advancedJson} disabled={advancedRunning} onChange={(event) => { setAdvancedJson(event.target.value); saveAdvancedDraft(event.target.value); }} placeholder="Paste prepared_v2 JSON here (e.g., from mythicsim-forever-engine/fixtures/...)" className={`${inputClass} font-mono`} />
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" disabled={!advancedJson.trim() || advancedRunning} onClick={() => void handleRunAdvanced()} className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50">
+              {advancedRunning ? "Running Prepared JSON…" : "Run Prepared JSON in WASM"}
+            </button>
+            <p role="status" className="text-xs text-slate-500 dark:text-slate-400">{advancedProgress ? `${advancedProgress.phase}: ${advancedProgress.message}` : advancedMessage}</p>
+          </div>
+          {advancedResult && <ReportView result={advancedResult} />}
+        </div>
+      )}
     </section>
 
     {progress && <div className={panel} role="status">

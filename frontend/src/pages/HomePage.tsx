@@ -59,7 +59,7 @@ export default function HomePage() {
           { title: "Top Gear", desc: "Evaluate gear combinations with lock constraints, pruning, and statistical uncertainty.", href: "/top-gear" },
           { title: "Droptimizer", desc: "Rank candidate item upgrades using verified engine item data.", href: "/droptimizer" },
           { title: "Gear Compare", desc: "Compare two profiles side-by-side with plain-language statistical verdicts.", href: "/gear-compare" },
-          { title: "Advanced Sim", desc: "Run validated prepared_v2 JSON directly through the Rust/WASM coverage gate and engine.", href: "/advanced-sim" },
+          { title: "Advanced Sim", desc: "Run validated prepared_v2 JSON directly through the Rust/WASM coverage gate and engine.", href: "/quick-sim?advanced=1" },
           { title: "About", desc: "Learn how ForeverBots works, required addon info, and current engine limitations.", href: "/about" },
         ].map((card) => (
           <Link
