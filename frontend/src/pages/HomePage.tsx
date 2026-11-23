@@ -36,7 +36,6 @@ export default function HomePage() {
       <section className="text-center space-y-4 py-10">
         <h1 className="text-3xl sm:text-4xl font-bold text-gold-400">Simulate. Optimize. Master WoW Forever.</h1>
         <p className="max-w-2xl mx-auto text-sm text-slate-500 dark:text-slate-400">Free, client-side combat simulation for World of Warcraft: Forever, powered by the MythicSim Forever engine running entirely in your browser.</p>
-        <Link to="/quick-sim" className="inline-block px-5 py-2.5 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 transition-colors">Run a Sim</Link>
       </section>
 
       <section aria-label="Site features" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

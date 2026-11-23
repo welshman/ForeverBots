@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 const FAQ_ITEMS = [
   {
     question: "How does ForeverBots simulate my character?",
@@ -74,15 +72,6 @@ export default function AboutPage() {
           <li>Some less common spell IDs in reports may still appear as Spell #ID until added to the spell-name map.</li>
         </ul>
       </section>
-
-      <div className="text-center">
-        <Link
-          to="/quick-sim"
-          className="inline-block px-5 py-2.5 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 transition-colors"
-        >
-          Run a Sim
-        </Link>
-      </div>
     </div>
   );
 }
