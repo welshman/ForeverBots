@@ -73,7 +73,7 @@ export default function DroptimizerPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2"><p className="text-xs font-semibold uppercase tracking-widest text-gold-500">Find your next upgrade</p><h1 className="text-3xl font-bold">Droptimizer</h1><p className="text-sm text-slate-500 dark:text-slate-400">Import your character, pick a dungeon, and compare individual drops against your equipped gear.</p></header>
+      <header className="space-y-2"><h1 className="text-3xl font-bold">Droptimizer</h1><p className="text-sm text-slate-500 dark:text-slate-400">Import your character, pick a dungeon, and compare individual drops against your equipped gear.</p></header>
       <SimcImporter onParsed={setProfile} />
       <section className={`${panel} space-y-4`} aria-labelledby="dungeon-heading">
         <h2 id="dungeon-heading" className="text-lg font-semibold">Choose a dungeon</h2>
