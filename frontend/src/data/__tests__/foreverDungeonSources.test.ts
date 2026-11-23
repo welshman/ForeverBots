@@ -30,8 +30,14 @@ describe("Forever dungeon foundation", () => {
     for (const item of foreverDungeonSources) {
       expect(Number.isSafeInteger(item.id) && item.id > 0).toBe(true);
       expect(item.name.trim().length).toBeGreaterThan(0);
+
+      const slug = item.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
       expect(item.sourceUrl).toBe(
-        `https://everlookdb.com/item/${item.id}/`,
+        `https://everlookdb.com/item/${item.id}/${slug}`,
       );
     }
   });
