@@ -3,7 +3,6 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import QuickSimPage from "./pages/QuickSimPage";
-import TopGearPage from "./pages/TopGearPage";
 import DroptimizerPage from "./pages/DroptimizerPage";
 import AdvancedSimPage from "./pages/AdvancedSimPage";
 import AboutPage from "./pages/AboutPage";
@@ -12,7 +11,6 @@ import { loadPreferences, savePreferences } from "./lib/storage";
 const ROUTE_TITLES: Record<string, string> = {
   "/": "ForeverBots — World of Warcraft Forever Simulator",
   "/quick-sim": "Quick Sim — ForeverBots",
-  "/top-gear": "Top Gear — ForeverBots",
   "/droptimizer": "Droptimizer — ForeverBots",
   "/advanced-sim": "Advanced Sim — ForeverBots",
   "/about": "About — ForeverBots",
@@ -86,7 +84,6 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/quick-sim" element={<QuickSimPage />} />
-            <Route path="/top-gear" element={<TopGearPage />} />
             <Route path="/droptimizer" element={<DroptimizerPage />} />
             <Route path="/advanced-sim" element={<AdvancedSimPage />} />
             <Route path="/about" element={<AboutPage />} />

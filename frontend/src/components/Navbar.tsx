@@ -9,7 +9,6 @@ interface NavbarProps {
 
 const NAV_ITEMS = [
   { to: "/quick-sim", label: "Quick Sim" },
-  { to: "/top-gear", label: "Top Gear" },
   { to: "/droptimizer", label: "Droptimizer" },
   { to: "/advanced-sim", label: "Advanced Sim" },
   { to: "/about", label: "About" },
