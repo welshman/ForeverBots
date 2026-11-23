@@ -293,7 +293,7 @@ export default function QuickSimPage() {
         <button type="button" onClick={() => void handleRun()}
           disabled={!profile || profile.status === "unparseable" || running || !validOptions}
           className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:opacity-50">
-          {running ? "Simulating..." : "Run Quick Sim"}
+          {running ? "Simulating..." : "Run Sim"}
         </button>
         {running ? <button type="button" onClick={() => simulationRunner.cancel()}
           className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
