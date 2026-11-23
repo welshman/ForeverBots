@@ -5,7 +5,6 @@ import HomePage from "./pages/HomePage";
 import QuickSimPage from "./pages/QuickSimPage";
 import TopGearPage from "./pages/TopGearPage";
 import DroptimizerPage from "./pages/DroptimizerPage";
-import GearComparePage from "./pages/GearComparePage";
 import AdvancedSimPage from "./pages/AdvancedSimPage";
 import AboutPage from "./pages/AboutPage";
 import { loadPreferences, savePreferences } from "./lib/storage";
@@ -15,7 +14,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/quick-sim": "Quick Sim — ForeverBots",
   "/top-gear": "Top Gear — ForeverBots",
   "/droptimizer": "Droptimizer — ForeverBots",
-  "/gear-compare": "Gear Compare — ForeverBots",
   "/advanced-sim": "Advanced Sim — ForeverBots",
   "/about": "About — ForeverBots",
 };
@@ -90,7 +88,6 @@ export default function App() {
             <Route path="/quick-sim" element={<QuickSimPage />} />
             <Route path="/top-gear" element={<TopGearPage />} />
             <Route path="/droptimizer" element={<DroptimizerPage />} />
-            <Route path="/gear-compare" element={<GearComparePage />} />
             <Route path="/advanced-sim" element={<AdvancedSimPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<HomePage />} />
