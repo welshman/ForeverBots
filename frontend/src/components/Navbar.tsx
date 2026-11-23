@@ -8,7 +8,7 @@ interface NavbarProps {
 }
 
 const NAV_ITEMS = [
-  { to: "/quick-sim", label: "Sim" },
+  { to: "/sim", label: "Sim" },
   { to: "/droptimizer", label: "Droptimizer" },
   { to: "/about", label: "About" },
 ];
