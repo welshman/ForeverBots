@@ -227,7 +227,7 @@ export default function QuickSimPage() {
   );
 
   return <div className="space-y-6">
-    <div><h1 className="text-2xl font-bold">Quick Sim</h1>
+    <div><h1 className="text-2xl font-bold">Sim</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400">Patchwerk single-target simulation executed in a dedicated Web Worker.</p>
     </div>
 
