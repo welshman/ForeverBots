@@ -41,7 +41,7 @@ export default function HomePage() {
 
       <section aria-label="Site features" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { title: "Sim", desc: "Import your /simc profile for a Quick Sim, or expand Advanced: Prepared JSON to run a prepared_v2 payload.", href: "/quick-sim" },
+          { title: "Sim", desc: "Run a fast Patchwerk single-target simulation with configurable fight length and iterations.", href: "/sim" },
           { title: "Droptimizer", desc: "Rank candidate item upgrades using verified engine item data.", href: "/droptimizer" },
           { title: "About", desc: "Learn how ForeverBots works, required addon info, and current engine limitations.", href: "/about" },
         ].map(card => (
