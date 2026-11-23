@@ -11,6 +11,7 @@ export interface ForeverDungeonItem {
 // Sources: Forever item-source extraction, EverlookDB item database, and WOWTBC.GG loot tables.
 // Boss attribution is applied where verified; otherwise null.
 export const foreverDungeonSources: readonly ForeverDungeonItem[] = [
+
   { id: 888, name: "Naga Battle Gloves", dungeon: "Blackfathom Deeps", boss: "Lady Sarevess", slot: "hands", sourceUrl: "https://everlookdb.com/item/888/naga-battle-gloves" },
   { id: 1155, name: "Rod of the Sleepwalker", dungeon: "Blackfathom Deeps", boss: "Twilight Lord Kelris", slot: "twohand", sourceUrl: "https://everlookdb.com/item/1155/rod-of-the-sleepwalker" },
   { id: 1470, name: "Murloc Skin Bag", dungeon: "Blackfathom Deeps", boss: null, slot: "bag", sourceUrl: "https://everlookdb.com/item/1470/murloc-skin-bag" },
