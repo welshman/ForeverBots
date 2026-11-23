@@ -98,7 +98,7 @@ export default function DroptimizerPage() {
             <button key={entry.name} type="button" disabled={running} aria-pressed={raid === entry.name} onClick={() => { setRaid(entry.name); setSelected({}); setQuery(""); }} className={`${control} space-y-3 p-5 text-left transition-colors ${raid === entry.name ? "border-gold-500 bg-gold-500/10 ring-1 ring-gold-500" : "hover:border-gold-500"}`}>
               <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-gold-500/30 to-slate-500/10 text-xl font-bold text-gold-500">R{index + 1}</span>
               <span className="block font-semibold">{entry.name}</span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">{entry.lootPending ? "Loot table coming soon" : `${entry.items.length} catalogue items`}{raid === entry.name ? " · Selected" : ""}</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400">{entry.lootPending ? "Loot table coming soon" : "Catalogue available"}{raid === entry.name ? " · Selected" : ""}</span>
             </button>
           ))}</div>
         )}
