@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-forever-engine = { git = "https://github.com/sage3648/mythicsim-forever-engine.git", rev = "6aa0fdee7498a9c8aabb9b6cb2d7862d795db18e" }
+forever-engine = { git = "https://github.com/sage3648/mythicsim-forever-engine.git", rev = "772410e141564c44fd5d03b44f9f0cde2f9d6938" }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 wasm-bindgen = "0.2"
 
