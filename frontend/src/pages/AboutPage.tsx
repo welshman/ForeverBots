@@ -47,7 +47,7 @@ export default function AboutPage() {
       <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
         <h2 className="text-lg font-semibold">Required In-Game Addon</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Install the <strong>SimulationCraft Addon</strong> in-game, type <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono text-xs">/simc</code>, and paste the output into the importer on the Quick Sim page. For characters below Level 60, use the Character Sheet Calibration fields to help the engine calibrate your level.
+          Install the <strong>SimulationCraft Addon</strong> in-game, type <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-obsidian-950 font-mono text-xs">/simc</code>, and paste the output into the importer on the Sim page. For characters below Level 60, use the Character Sheet Calibration fields to help the engine calibrate your level.
         </p>
       </section>
 
@@ -80,7 +80,7 @@ export default function AboutPage() {
           to="/quick-sim"
           className="inline-block px-5 py-2.5 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 transition-colors"
         >
-          Run a Quick Sim
+          Run a Sim
         </Link>
       </div>
     </div>
