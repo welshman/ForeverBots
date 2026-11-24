@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import SimcImporter from "../components/SimcImporter";
 import ForeverItemLink from "../components/ForeverItemLink";
 import GearItemCard, { gearSlotLabel } from "../components/GearItemCard";
+import { useToast } from "../hooks/useToast";
 import { simulationRunner } from "../lib/engineAdapter";
 import { buildForeverRequestJson } from "../lib/requestBuilder";
 import { foreverDungeonSources, type ForeverDungeonItem } from "../data/foreverDungeonSources";
@@ -18,6 +19,7 @@ const dungeons = [...new Set(foreverDungeonSources.map((item) => item.dungeon))]
 const raids = foreverRaidSources;
 
 export default function DroptimizerPage() {
+  const { show } = useToast();
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [sourceType, setSourceType] = useState<"dungeon" | "raid">("dungeon");
   const [dungeon, setDungeon] = useState("");
@@ -41,14 +43,12 @@ export default function DroptimizerPage() {
     const candidates: Candidate[] = picked.map((item) => ({ key: String(item.id), item, targetSlot: selected[String(item.id)] }));
     const warnings: string[] = [];
     const seen = new Set(candidates.map((candidate) => candidate.key));
-
     manualLines.split("\n").forEach((line, index) => {
       const trimmed = line.trim();
       if (!trimmed) return;
       const [rawSlot, rawId] = trimmed.split("=");
       const slot = rawSlot?.trim().toLowerCase();
       const itemId = Number(rawId?.trim());
-
       if (!slot || !rawId?.trim()) {
         warnings.push(`Line ${index + 1}: use slot=itemId, for example trinket=11815.`);
         return;
@@ -74,7 +74,6 @@ export default function DroptimizerPage() {
       seen.add(String(itemId));
       candidates.push({ key, item, targetSlot: slot as SimulationSlot });
     });
-
     return { candidates, manualWarnings: warnings };
   }, [picked, selected, manualLines]);
   const count = candidates.length;
@@ -105,8 +104,11 @@ export default function DroptimizerPage() {
         if (!left.error && right.error) return -1;
         return (right.gainPct ?? -Infinity) - (left.gainPct ?? -Infinity);
       }));
-    } catch (error) { setFailure(error instanceof Error ? error.message : "Simulation failed. Please try again."); }
-    finally { setProgress(""); setRunning(false); }
+      show("Droptimizer comparison complete.");
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "Simulation failed. Please try again.");
+      show("Droptimizer failed.", "error");
+    } finally { setProgress(""); setRunning(false); }
   };
 
   return (

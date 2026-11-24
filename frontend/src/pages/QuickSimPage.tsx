@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SimcImporter from "../components/SimcImporter";
 import ReportView from "../components/ReportView";
+import ConfirmModal from "../components/ConfirmModal";
+import { useToast } from "../hooks/useToast";
 import { simulationRunner } from "../lib/engineAdapter";
 import {
   compareResults,
@@ -18,6 +20,9 @@ import {
   saveProfile,
 } from "../lib/savedProfiles";
 import { appendHistory, loadAdvancedDraft, loadHistory, saveAdvancedDraft } from "../lib/storage";
+import { loadPresets, savePreset, deletePreset, SimPreset } from "../lib/presets";
+import { buildShareUrl, decodeOptionsFromUrl } from "../lib/shareUrl";
+import { exportHistoryToCsv, exportHistoryToJson, downloadFile } from "../lib/historyExport";
 import { ParsedSimcProfile, SimulationProgress, SimulationResult } from "../types/simulation";
 
 const OPTS_KEY = "foreverbots:quicksim_opts:v1";
@@ -52,6 +57,7 @@ function loadOptions(): Options {
 }
 
 export default function QuickSimPage() {
+  const { show } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [importerKey, setImporterKey] = useState(0);
@@ -67,7 +73,10 @@ export default function QuickSimPage() {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [compareBaseline, setCompareBaseline] = useState<SimulationResult | null>(null);
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
+  const [historyQuery, setHistoryQuery] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>(() => loadSavedProfiles());
+  const [presets, setPresets] = useState<SimPreset[]>(() => loadPresets());
+  const [presetName, setPresetName] = useState("");
   const [profileName, setProfileName] = useState("");
   const [running, setRunning] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
@@ -91,6 +100,18 @@ export default function QuickSimPage() {
     () => (result && compareBaseline && result.jobId !== compareBaseline.jobId ? compareResults(compareBaseline, result, options.iterations) : null),
     [result, compareBaseline, options.iterations]
   );
+  const filteredHistory = useMemo(() => {
+    const q = historyQuery.trim().toLowerCase();
+    if (!q) return history;
+    return history.filter(h => h.jobId.toLowerCase().includes(q) || (h.dps !== undefined && String(h.dps).includes(q)) || h.engineVersion.toLowerCase().includes(q));
+  }, [history, historyQuery]);
+
+  useEffect(() => {
+    const shared = decodeOptionsFromUrl(window.location.search);
+    if (shared) {
+      setOptions(current => ({ ...current, ...shared } as Options));
+    }
+  }, []);
 
   useEffect(() => {
     if (!validOptions) return;
@@ -118,10 +139,11 @@ export default function QuickSimPage() {
         return;
       }
       setResult(response);
-      try { appendHistory(response); setHistory(loadHistory()); }
+      try { appendHistory(response); setHistory(loadHistory()); show("Simulation completed."); }
       catch { setMessage("Simulation completed, but browser history could not be saved."); }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Simulation failed. Please try again.");
+      show("Simulation failed.", "error");
     } finally {
       busy.current = false;
       setRunning(false);
@@ -140,24 +162,13 @@ export default function QuickSimPage() {
       const response = await simulationRunner.run({
         jobId,
         profile: {
-          characterName: "Advanced",
-          className: "mage",
-          spec: "frost",
-          level: 60,
-          race: "gnome",
-          gear: [],
-          rawText: advancedJson,
-          status: "supported",
-          issues: [],
+          characterName: "Advanced", className: "mage", spec: "frost", level: 60, race: "gnome",
+          gear: [], rawText: advancedJson, status: "supported", issues: [],
         },
         options: {
-          fightStyle: "Patchwerk",
-          durationSeconds: options.duration,
-          durationVariancePct: options.variancePct,
-          targetCount: 1,
-          iterations: options.iterations,
-          latencyMs: options.latencyMs,
-          seed: options.seed,
+          fightStyle: "Patchwerk", durationSeconds: options.duration,
+          durationVariancePct: options.variancePct, targetCount: 1,
+          iterations: options.iterations, latencyMs: options.latencyMs, seed: options.seed,
           preparedJsonOverride: advancedJson,
         },
       }, setAdvancedProgress);
@@ -166,8 +177,10 @@ export default function QuickSimPage() {
         return;
       }
       setAdvancedResult(response);
+      show("Advanced simulation completed.");
     } catch (error) {
       setAdvancedMessage(error instanceof Error ? error.message : "Advanced simulation failed. Please try again.");
+      show("Advanced simulation failed.", "error");
     } finally {
       setAdvancedRunning(false);
       setAdvancedProgress(null);
@@ -179,6 +192,7 @@ export default function QuickSimPage() {
     if (!running) return;
     simulationRunner.cancel();
     setMessage("Simulation cancelled.");
+    show("Simulation cancelled.", "warning");
   };
 
   const cancelAdvanced = () => {
@@ -206,21 +220,15 @@ export default function QuickSimPage() {
     try {
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(text);
-      setMessage(`${label} copied.`);
-    } catch { setMessage(`Could not copy ${label}. Your browser may block clipboard access.`); }
+      show(`${label} copied.`);
+    } catch { show(`Could not copy ${label}.`, "error"); }
   };
 
   const downloadCsv = () => {
     if (!result) return;
     const csv = exportResultToCsv(result, options.iterations);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `foreverbots-quicksim-${result.jobId.slice(0, 8)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setMessage("CSV report downloaded.");
+    downloadFile(csv, `foreverbots-quicksim-${result.jobId.slice(0, 8)}.csv`, "text/csv;charset=utf-8;");
+    show("CSV report downloaded.");
   };
 
   const handleSaveProfile = () => {
@@ -228,16 +236,28 @@ export default function QuickSimPage() {
     try {
       setSavedProfiles(saveProfile(profileName || profile.characterName, profile));
       setProfileName("");
-      setMessage("Profile saved locally.");
-    } catch { setMessage("Could not save profile to browser storage."); }
+      show("Profile saved locally.");
+    } catch { show("Could not save profile.", "error"); }
   };
 
   const handleLoadSaved = (saved: SavedProfile) => {
     try {
       localStorage.setItem("foreverbots:last_simc:v1", saved.rawText);
       setImporterKey(k => k + 1);
-      setMessage(`Loaded saved profile "${saved.name}".`);
-    } catch { setMessage("Could not load saved profile."); }
+      show(`Loaded saved profile "${saved.name}".`);
+    } catch { show("Could not load saved profile.", "error"); }
+  };
+
+  const handleSavePreset = () => {
+    if (!validOptions) return;
+    setPresets(savePreset(presetName || "Preset", options));
+    setPresetName("");
+    show("Preset saved.");
+  };
+
+  const handleApplyPreset = (preset: SimPreset) => {
+    setOptions({ duration: preset.duration, iterations: preset.iterations, variancePct: preset.variancePct, latencyMs: preset.latencyMs, seed: preset.seed });
+    show(`Preset "${preset.name}" applied.`);
   };
 
   const field = (key: keyof Options, label: string, presets: readonly number[] = []) => (
@@ -282,14 +302,7 @@ export default function QuickSimPage() {
         <h2 className="text-sm font-semibold">Saved Profiles</h2>
         {profile && profile.rawText.trim() && (
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              aria-label="Profile name"
-              placeholder={profile.characterName || "Profile name"}
-              value={profileName}
-              onChange={e => setProfileName(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
-            />
+            <input type="text" aria-label="Profile name" placeholder={profile.characterName || "Profile name"} value={profileName} onChange={e => setProfileName(e.target.value)} className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70" />
             <button type="button" onClick={handleSaveProfile} className={secondary}>Save Current</button>
           </div>
         )}
@@ -315,6 +328,28 @@ export default function QuickSimPage() {
       )}
     </section>
 
+    <section className={panel} aria-label="Simulation presets">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Presets</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="text" aria-label="Preset name" placeholder="Preset name" value={presetName} onChange={e => setPresetName(e.target.value)} className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70" />
+          <button type="button" onClick={handleSavePreset} disabled={!validOptions} className={secondary}>Save Preset</button>
+        </div>
+      </div>
+      {presets.length === 0 ? (
+        <p className="text-xs text-slate-500 dark:text-slate-400">No presets yet. Configure options above and click Save Preset.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {presets.map(preset => (
+            <div key={preset.id} className="flex items-center gap-1">
+              <button type="button" onClick={() => handleApplyPreset(preset)} className={`${secondary} border-gold-500/40 text-gold-400`}>{preset.name}</button>
+              <button type="button" aria-label={`Delete preset ${preset.name}`} onClick={() => setPresets(deletePreset(preset.id))} className="text-xs px-1.5 py-1 rounded text-rose-400 hover:bg-rose-500/10">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
     <section className={panel} aria-label="Simulation settings">
       <div className="grid gap-5 sm:grid-cols-2">
         {field("duration", "Fight Length (s)", [60, 180, 300])}
@@ -326,11 +361,10 @@ export default function QuickSimPage() {
           className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:opacity-50">
           {running ? "Simulating..." : "Run Sim"}
         </button>
-        {running ? <button type="button" onClick={cancelNormal}
-          className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
+        {running ? <button type="button" onClick={cancelNormal} className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
           : <span className="text-xs text-slate-500">Shortcut: Ctrl/Cmd+Enter</span>}
-        <button type="button" aria-expanded={showMoreOptions} aria-controls="quick-more-options"
-          onClick={() => setShowMoreOptions(value => !value)} className={secondary}>{showMoreOptions ? "Hide Options" : "More Options"}</button>
+        <button type="button" onClick={() => { navigator.clipboard?.writeText(buildShareUrl({ fightStyle: "Patchwerk", durationSeconds: options.duration, durationVariancePct: options.variancePct, targetCount: 1, iterations: options.iterations, latencyMs: options.latencyMs, seed: options.seed })).then(() => show("Share link copied.")); }} className={secondary}>Copy Share Link</button>
+        <button type="button" aria-expanded={showMoreOptions} aria-controls="quick-more-options" onClick={() => setShowMoreOptions(v => !v)} className={secondary}>{showMoreOptions ? "Hide Options" : "More Options"}</button>
       </div>
       {showMoreOptions && <div id="quick-more-options" className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
         <div className="grid gap-4 sm:grid-cols-3">
@@ -351,7 +385,6 @@ export default function QuickSimPage() {
         </div>
         <span aria-hidden="true" className="text-gold-400">{showAdvanced ? "−" : "+"}</span>
       </button>
-
       {showAdvanced && (
         <div id="advanced-json-panel" className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
           <label htmlFor="advanced-json" className="block text-xs text-slate-500 dark:text-slate-400">Prepared_v2 JSON payload</label>
@@ -379,20 +412,13 @@ export default function QuickSimPage() {
 
     {result && <>
       <ReportView result={result} />
-
       {insights && (
         <section className={panel} aria-label="Simulation result insights">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">{insights.headline}</h2>
             {insights.ci && (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                insights.ci.stability === "stable"
-                  ? "bg-emerald-500/15 text-emerald-500"
-                  : insights.ci.stability === "moderate"
-                    ? "bg-amber-500/15 text-amber-500"
-                    : "bg-rose-500/15 text-rose-500"
-              }`}>
-                {insights.ci.stability === "stable" ? "Stable" : insights.ci.stability === "moderate" ? "Moderate variance" : "High variance"}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${insights.ci.stability === "very-stable" || insights.ci.stability === "stable" ? "bg-emerald-500/15 text-emerald-500" : insights.ci.stability === "moderate" ? "bg-amber-500/15 text-amber-500" : "bg-rose-500/15 text-rose-500"}`}>
+                {insights.ci.stability === "very-stable" ? "Very stable" : insights.ci.stability === "stable" ? "Stable" : insights.ci.stability === "moderate" ? "Moderate variance" : insights.ci.stability === "high-variance" ? "High variance" : "Very high variance"}
               </span>
             )}
           </div>
@@ -402,28 +428,18 @@ export default function QuickSimPage() {
           </ul>
         </section>
       )}
-
       {comparison && (
         <section className={panel} aria-label="Run comparison verdict">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Comparison vs Selected Baseline</h2>
             <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                comparison.verdict === "clear-upgrade"
-                  ? "bg-emerald-500/15 text-emerald-500"
-                  : comparison.verdict === "clear-downgrade"
-                    ? "bg-rose-500/15 text-rose-500"
-                    : "bg-slate-500/15 text-slate-400"
-              }`}>
-                {comparison.label}
-              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${comparison.verdict === "clear-upgrade" ? "bg-emerald-500/15 text-emerald-500" : comparison.verdict === "clear-downgrade" ? "bg-rose-500/15 text-rose-500" : "bg-slate-500/15 text-slate-400"}`}>{comparison.label}</span>
               <button type="button" onClick={() => setCompareBaseline(null)} className="text-xs text-slate-400 hover:text-slate-200">Clear</button>
             </div>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-300">{comparison.explanation}</p>
         </section>
       )}
-
       <div className="flex flex-wrap gap-2" aria-label="Export and copy report data">
         <button type="button" className={secondary} onClick={() => void copyText("Markdown summary", exportResultToMarkdown(result, options.iterations))}>Copy Markdown</button>
         <button type="button" className={secondary} onClick={downloadCsv}>Export CSV</button>
@@ -433,26 +449,32 @@ export default function QuickSimPage() {
     </>}
 
     {history.length > 0 && <section className={panel} aria-label="Recent simulations">
-      <div className="flex justify-between items-center gap-2"><h2 className="text-sm font-semibold">Recent Simulations</h2>
-        {confirmClearHistory ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Clear all saved simulations?</span>
-            <button type="button" className={secondary} onClick={() => setConfirmClearHistory(false)}>Cancel</button>
-            <button type="button" className="text-xs px-2 py-1 rounded-lg text-rose-400 hover:bg-rose-500/10" onClick={() => {
-              try {
-                localStorage.removeItem("foreverbots:history:v1");
-                setHistory([]);
-                setCompareBaseline(null);
-                setConfirmClearHistory(false);
-                setMessage("Simulation history cleared.");
-              } catch { setMessage("Browser history could not be cleared."); }
-            }}>Clear history</button>
-          </div>
-        ) : (
-          <button type="button" className="text-xs text-slate-400 hover:text-rose-400" onClick={() => setConfirmClearHistory(true)}>Clear history</button>
-        )}
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <h2 className="text-sm font-semibold">Recent Simulations</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="search" aria-label="Search history" placeholder="Search history..." value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70" />
+          <button type="button" onClick={() => { downloadFile(exportHistoryToCsv(history), "foreverbots-history.csv", "text/csv;charset=utf-8;"); show("History CSV downloaded."); }} className={secondary}>Export CSV</button>
+          <button type="button" onClick={() => { downloadFile(exportHistoryToJson(history), "foreverbots-history.json", "application/json"); show("History JSON downloaded."); }} className={secondary}>Export JSON</button>
+          {confirmClearHistory ? (
+            <>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Clear all?</span>
+              <button type="button" className={secondary} onClick={() => setConfirmClearHistory(false)}>Cancel</button>
+              <button type="button" className="text-xs px-2 py-1 rounded-lg text-rose-400 hover:bg-rose-500/10" onClick={() => {
+                try {
+                  localStorage.removeItem("foreverbots:history:v1");
+                  setHistory([]);
+                  setCompareBaseline(null);
+                  setConfirmClearHistory(false);
+                  show("Simulation history cleared.");
+                } catch { show("Could not clear history.", "error"); }
+              }}>Clear history</button>
+            </>
+          ) : (
+            <button type="button" className="text-xs text-slate-400 hover:text-rose-400" onClick={() => setConfirmClearHistory(true)}>Clear history</button>
+          )}
+        </div>
       </div>
-      <div className="divide-y divide-slate-200 dark:divide-slate-800">{history.slice(0, 8).map(item => {
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">{filteredHistory.slice(0, 8).map(item => {
         const selected = result?.jobId === item.jobId;
         const isBaseline = compareBaseline?.jobId === item.jobId;
         const delta = result?.ok && item.ok && result.dps !== undefined && item.dps !== undefined && !selected ? item.dps - result.dps : null;
@@ -471,5 +493,15 @@ export default function QuickSimPage() {
         </div>;
       })}</div>
     </section>}
+
+    <ConfirmModal open={confirmClearHistory} title="Clear simulation history?" message="This will permanently remove all saved simulation results from this browser." confirmLabel="Clear history" onConfirm={() => {
+      try {
+        localStorage.removeItem("foreverbots:history:v1");
+        setHistory([]);
+        setCompareBaseline(null);
+        setConfirmClearHistory(false);
+        show("Simulation history cleared.");
+      } catch { show("Could not clear history.", "error"); }
+    }} onCancel={() => setConfirmClearHistory(false)} />
   </div>;
 }
