@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { SimulationResult } from "../types/simulation";
 import AbilityTimeline from "./AbilityTimeline";
+import { formatDps } from "../lib/resultInsights";
 
 const SPELL_NAMES: Record<number, string> = {
   686:"Shadow Bolt",695:"Shadow Bolt",705:"Shadow Bolt",1088:"Shadow Bolt",1106:"Shadow Bolt",7641:"Shadow Bolt",11659:"Shadow Bolt",11660:"Shadow Bolt",11661:"Shadow Bolt",25307:"Shadow Bolt",
@@ -107,7 +108,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
     const top = details?.actions.slice(0, 3).map((a) => `${a.name} (${(100 * a.damage / (details.total || 1)).toFixed(1)}%)`).join(", ");
     const text = [
       `ForeverBots Quick Sim — ${details?.name ?? "Character"}`,
-      `DPS: ${result.dps?.toFixed(1) ?? "Unavailable"} (σ ${result.statistics.stdDev?.toFixed(1) ?? "—"})`,
+      `DPS: ${formatDps(result.dps)} (σ ${formatDps(result.statistics.stdDev)})`,
       `Fight: ${details?.duration ? `${details.duration.toFixed(1)}s` : "—"} | Iterations: ${details?.iterations || "—"}`,
       top ? `Top Abilities: ${top}` : "",
     ].filter(Boolean).join("\n");
@@ -156,7 +157,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       "| --- | ---: | ---: | ---: | ---: |",
       ...sortedActions.map(
         (a) =>
-          `| ${a.name} | ${(100 * a.damage / (details.total || 1)).toFixed(1)}% | ${a.dps?.toFixed(1) ?? "—"} | ${a.casts.toFixed(1)} | ${a.crit !== undefined ? `${a.crit.toFixed(1)}%` : "—"} |`
+          `| ${a.name} | ${(100 * a.damage / (details.total || 1)).toFixed(1)}% | ${formatDps(a.dps)} | ${a.casts.toFixed(1)} | ${a.crit !== undefined ? `${a.crit.toFixed(1)}%` : "—"} |`
       ),
     ];
     navigator.clipboard?.writeText(lines.join("\n")).then(() => {
@@ -172,17 +173,21 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       ? Math.max(0, Math.min(100, ((result.dps - minDps) / (maxDps - minDps)) * 100))
       : null;
 
+  const failureTitle = result.errors.some((error) => error.code.toUpperCase().includes("CANCEL"))
+    ? "Simulation Cancelled"
+    : "Simulation Refused or Failed";
+
   return <div className="space-y-6">
-    {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>Simulation Refused or Failed</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
+    {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>{failureTitle}</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
       <section className={panel}>
         <div className="flex flex-wrap justify-between items-start gap-4">
           <div>
             <h2 className="text-xl font-bold">{details?.name ?? "Character"}</h2>
             <p className="text-xs uppercase tracking-wider text-slate-400">Quick Sim Result</p>
           </div>
-          <div className="text-4xl font-bold text-gold-400">{result.dps?.toLocaleString(undefined,{maximumFractionDigits:1}) ?? "Unavailable"} DPS</div>
+          <div className="text-4xl font-bold text-gold-400">{formatDps(result.dps)} DPS</div>
         </div>
-        <p className="text-sm text-slate-400">Standard deviation: {result.statistics.stdDev?.toFixed(1) ?? "Unavailable"} | Minimum: {result.statistics.min?.toFixed(1) ?? "Unavailable"} | Maximum: {result.statistics.max?.toFixed(1) ?? "Unavailable"}</p>
+        <p className="text-sm text-slate-400">Standard deviation: {formatDps(result.statistics.stdDev)} | Minimum: {formatDps(result.statistics.min)} | Maximum: {formatDps(result.statistics.max)}</p>
         {meanPos !== null && minDps !== undefined && maxDps !== undefined && (
           <div className="space-y-1">
             <div className="relative h-2 rounded-full bg-slate-200 dark:bg-obsidian-950 overflow-hidden">
@@ -190,9 +195,9 @@ export default function ReportView({ result }: { result: SimulationResult }) {
               <div className="absolute top-0 bottom-0 w-1 bg-gold-400" style={{ left: `calc(${meanPos}% - 2px)` }} />
             </div>
             <div className="flex justify-between text-[11px] font-mono text-slate-500">
-              <span>Min {minDps.toFixed(1)}</span>
-              <span>Mean {result.dps?.toFixed(1)}</span>
-              <span>Max {maxDps.toFixed(1)}</span>
+              <span>Min {formatDps(minDps)}</span>
+              <span>Mean {formatDps(result.dps)}</span>
+              <span>Max {formatDps(maxDps)}</span>
             </div>
           </div>
         )}
@@ -248,7 +253,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
           <th className={cell}><button type="button" onClick={() => toggleSort("dps")} className="hover:text-gold-400 transition-colors">DPS{sortArrow("dps")}</button></th>
           <th className={cell}><button type="button" onClick={() => toggleSort("casts")} className="hover:text-gold-400 transition-colors">Casts / fight{sortArrow("casts")}</button></th>
           <th className={cell}><button type="button" onClick={() => toggleSort("crit")} className="hover:text-gold-400 transition-colors">Crit %{sortArrow("crit")}</button></th>
-        </tr></thead><tbody>{sortedActions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{a.dps?.toFixed(1) ?? "Unavailable"}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table>
+        </tr></thead><tbody>{sortedActions.map((a,i) => <tr key={i} className="border-t border-slate-800"><td className={cell}>{a.name}</td><td className={cell}>{(100*a.damage/details.total).toFixed(1)}%</td><td className={`${cell} min-w-32`}><div className="h-2 rounded bg-slate-800 overflow-hidden"><div className={`h-2 ${a.color}`} style={{width:`${100*a.damage/details.total}%`}} /></div></td><td className={cell}>{a.damage.toFixed(1)}</td><td className={cell}>{formatDps(a.dps)}</td><td className={cell}>{a.casts.toFixed(1)}</td><td className={cell}>{a.crit?.toFixed(1) ?? "Unavailable"}</td></tr>)}</tbody></table>
       </section>}
       {!!details?.auras.length && <section className={panel}>
         <div className="flex flex-wrap items-center justify-between gap-2">
