@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import SimcImporter from "../components/SimcImporter";
 import ForeverItemLink from "../components/ForeverItemLink";
 import GearItemCard, { gearSlotLabel } from "../components/GearItemCard";
@@ -37,22 +37,50 @@ export default function DroptimizerPage() {
   const picked = items.filter((item) => selected[String(item.id)]);
   const remove = (id: number) => setSelected((previous) => { const next = { ...previous }; delete next[String(id)]; return next; });
 
-  const buildCandidates = (): Candidate[] => {
+  const { candidates, manualWarnings } = useMemo(() => {
     const candidates: Candidate[] = picked.map((item) => ({ key: String(item.id), item, targetSlot: selected[String(item.id)] }));
-    for (const [index, line] of manualLines.split("\n").entries()) {
-      const [slot, rawId] = line.trim().split("=");
-      const itemId = Number(rawId);
-      if (!slot || !Number.isInteger(itemId) || itemId <= 0) continue;
+    const warnings: string[] = [];
+    const seen = new Set(candidates.map((candidate) => candidate.key));
+
+    manualLines.split("\n").forEach((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const [rawSlot, rawId] = trimmed.split("=");
+      const slot = rawSlot?.trim().toLowerCase();
+      const itemId = Number(rawId?.trim());
+
+      if (!slot || !rawId?.trim()) {
+        warnings.push(`Line ${index + 1}: use slot=itemId, for example trinket=11815.`);
+        return;
+      }
+      if (!simulationSlotsForForeverSlot(slot).length) {
+        warnings.push(`Line ${index + 1}: “${slot}” is not a supported slot.`);
+        return;
+      }
+      if (!Number.isInteger(itemId) || itemId <= 0) {
+        warnings.push(`Line ${index + 1}: item ID must be a positive whole number.`);
+        return;
+      }
       const item = foreverDungeonSources.find((source) => source.id === itemId);
-      candidates.push({ key: `manual-${index}-${itemId}`, item: item ?? { id: itemId, name: `Item #${itemId}`, dungeon: "Manual", boss: null, slot, sourceUrl: "" }, targetSlot: slot as SimulationSlot });
-    }
-    return candidates;
-  };
-  const count = buildCandidates().length;
+      if (!item) {
+        warnings.push(`Line ${index + 1}: item ${itemId} is not in the dungeon catalogue.`);
+        return;
+      }
+      const key = `manual-${index}-${itemId}`;
+      if (seen.has(String(itemId))) {
+        warnings.push(`Line ${index + 1}: item ${itemId} is already selected.`);
+        return;
+      }
+      seen.add(String(itemId));
+      candidates.push({ key, item, targetSlot: slot as SimulationSlot });
+    });
+
+    return { candidates, manualWarnings: warnings };
+  }, [picked, selected, manualLines]);
+  const count = candidates.length;
 
   const runDroptimizer = async () => {
     if (!profile || running) return;
-    const candidates = buildCandidates();
     if (!candidates.length) return;
     setRunning(true); setResults([]); setFailure(""); setBaseline(undefined); setProgress("Evaluating equipped baseline…");
     try {
@@ -72,6 +100,11 @@ export default function DroptimizerPage() {
         rows.push({ candidate, dps, delta, gainPct: delta !== undefined && baseDps ? 100 * delta / baseDps : undefined, error: result.ok ? undefined : result.errors[0]?.message ?? "Simulation failed" });
         setResults([...rows]);
       }
+      setResults((previousRows) => [...previousRows].sort((left, right) => {
+        if (left.error && !right.error) return 1;
+        if (!left.error && right.error) return -1;
+        return (right.gainPct ?? -Infinity) - (left.gainPct ?? -Infinity);
+      }));
     } catch (error) { setFailure(error instanceof Error ? error.message : "Simulation failed. Please try again."); }
     finally { setProgress(""); setRunning(false); }
   };
@@ -119,7 +152,7 @@ export default function DroptimizerPage() {
           {!dungeon ? <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">Choose a dungeon above to browse its drops.</p> : visible.length === 0 ? <p role="status" className="py-8 text-center text-sm text-slate-500">No matching items. Try another search.</p> : bosses.map((boss) => (
             <section key={boss} className="space-y-3"><h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400">{boss}</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.filter((item) => (item.boss ?? "Dungeon drops") === boss).map((item) => <GearItemCard key={item.id} item={item} selectedSlot={selected[String(item.id)]} disabled={running} onRemove={() => remove(item.id)} onSelect={(slot) => { if (simulationSlotsForForeverSlot(item.slot).includes(slot)) setSelected((previous) => ({ ...previous, [String(item.id)]: slot })); }} />)}</div></section>
           ))}
-          <details><summary className="cursor-pointer text-sm text-slate-500 dark:text-slate-400">Advanced: manual slot=itemId</summary><label className="mt-3 block text-xs">One candidate per line<textarea value={manualLines} disabled={running} onChange={(event) => setManualLines(event.target.value)} rows={3} className={`${control} mt-2 w-full bg-transparent font-mono`} /></label></details>
+          <details><summary className="cursor-pointer text-sm text-slate-500 dark:text-slate-400">Advanced: manual slot=itemId</summary><label className="mt-3 block text-xs">One candidate per line<textarea value={manualLines} disabled={running} onChange={(event) => setManualLines(event.target.value)} rows={3} className={`${control} mt-2 w-full bg-transparent font-mono`} /></label>{manualWarnings.length > 0 && <ul className="mt-3 space-y-1 text-xs text-amber-500">{manualWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}</details>
         </section>
       )}
       <section className={`${panel} space-y-4`} aria-label="Selected comparisons">
