@@ -24,24 +24,42 @@ function LegacySimRedirect({ advanced = false }: { advanced?: boolean }) {
 }
 
 class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; resetKey?: string },
   { error: Error | null }
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: { children: React.ReactNode; resetKey?: string }) {
     super(props);
     this.state = { error: null };
   }
-  static getDerivedStateFromError(error: Error) { return { error }; }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidUpdate(previousProps: { resetKey?: string }) {
+    if (this.state.error && previousProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
+  }
+
+  resetErrorBoundary = () => {
+    this.setState({ error: null });
+  };
+
   render() {
     if (this.state.error) {
       return (
         <div className="max-w-xl mx-auto rounded-2xl border border-rose-500/40 bg-rose-500/10 p-6 space-y-3 text-center">
           <h1 className="text-lg font-bold text-rose-400">Something went wrong</h1>
           <p className="text-xs font-mono text-slate-300">{this.state.error.message}</p>
-          <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-xs font-semibold hover:bg-gold-400 transition-colors">Reload ForeverBots</button>
+          <div className="flex justify-center gap-3">
+            <button type="button" onClick={this.resetErrorBoundary} className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-xs font-semibold hover:bg-gold-400 transition-colors">Try again</button>
+            <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition-colors">Reload ForeverBots</button>
+          </div>
         </div>
       );
     }
+
     return this.props.children;
   }
 }
@@ -50,15 +68,18 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => loadPreferences().theme);
   const [showTop, setShowTop] = useState(false);
   const location = useLocation();
+
   useEffect(() => {
     document.title = ROUTE_TITLES[location.pathname] ?? "ForeverBots";
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [location.pathname]);
+
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark");
@@ -66,11 +87,12 @@ export default function App() {
     const prefs = loadPreferences();
     savePreferences({ ...prefs, theme });
   }, [theme]);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-transparent dark:text-slate-100">
       <Navbar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")} />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ErrorBoundary>
+        <ErrorBoundary resetKey={location.pathname}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/sim" element={<QuickSimPage />} />
