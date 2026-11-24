@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import HomePage from "./pages/HomePage";
-import QuickSimPage from "./pages/QuickSimPage";
-import DroptimizerPage from "./pages/DroptimizerPage";
-import AboutPage from "./pages/AboutPage";
-import NotFoundPage from "./pages/NotFoundPage";
+import ShortcutHelpModal from "./components/ShortcutHelpModal";
+import ToastContainer from "./components/Toast";
+import { ToastProvider } from "./hooks/useToast";
+import { migrateStorage } from "./lib/storageVersioning";
 import { loadPreferences, savePreferences } from "./lib/storage";
+
+const HomePage = lazy(() => import("./pages/HomePage"));
+const QuickSimPage = lazy(() => import("./pages/QuickSimPage"));
+const DroptimizerPage = lazy(() => import("./pages/DroptimizerPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const ROUTE_TITLES: Record<string, string> = {
   "/": "ForeverBots — World of Warcraft Forever Simulator",
@@ -59,7 +64,6 @@ class ErrorBoundary extends React.Component<
         </div>
       );
     }
-
     return this.props.children;
   }
 }
@@ -67,7 +71,10 @@ class ErrorBoundary extends React.Component<
 export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => loadPreferences().theme);
   const [showTop, setShowTop] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const location = useLocation();
+
+  useEffect(() => { migrateStorage(); }, []);
 
   useEffect(() => {
     document.title = ROUTE_TITLES[location.pathname] ?? "ForeverBots";
@@ -81,6 +88,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark");
     else root.classList.remove("dark");
@@ -89,25 +107,32 @@ export default function App() {
   }, [theme]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-transparent dark:text-slate-100">
-      <Navbar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")} />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ErrorBoundary resetKey={location.pathname}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/sim" element={<QuickSimPage />} />
-            <Route path="/quick-sim" element={<LegacySimRedirect />} />
-            <Route path="/droptimizer" element={<DroptimizerPage />} />
-            <Route path="/advanced-sim" element={<LegacySimRedirect advanced />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </ErrorBoundary>
-      </main>
-      {showTop && <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Scroll to top" className="fixed bottom-6 right-6 z-30 px-3 py-2 rounded-full border border-gold-500/40 bg-obsidian-900/90 text-gold-400 text-xs font-semibold shadow-lg hover:bg-gold-500/20 transition-colors">↑ Top</button>}
-      <footer className="border-t border-slate-200 dark:border-gold-500/15 py-6 text-center text-xs text-slate-500 dark:text-slate-400 px-4">
-        ForeverBots is an unofficial community project and is not affiliated with Blizzard Entertainment, the WoW Forever team, Raidbots, or MythicSim.
-      </footer>
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-transparent dark:text-slate-100">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-gold-500 focus:px-3 focus:py-1 focus:text-obsidian-950">Skip to content</a>
+        <Navbar theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")} />
+        <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<div className="py-20 text-center text-sm text-slate-500">Loading…</div>}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/sim" element={<QuickSimPage />} />
+                <Route path="/quick-sim" element={<LegacySimRedirect />} />
+                <Route path="/droptimizer" element={<DroptimizerPage />} />
+                <Route path="/advanced-sim" element={<LegacySimRedirect advanced />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
+        </main>
+        {showTop && <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Scroll to top" className="fixed bottom-6 right-6 z-30 px-3 py-2 rounded-full border border-gold-500/40 bg-obsidian-900/90 text-gold-400 text-xs font-semibold shadow-lg hover:bg-gold-500/20 transition-colors">↑ Top</button>}
+        <ShortcutHelpModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+        <ToastContainer />
+        <footer className="border-t border-slate-200 dark:border-gold-500/15 py-6 text-center text-xs text-slate-500 dark:text-slate-400 px-4">
+          ForeverBots is an unofficial community project and is not affiliated with Blizzard Entertainment, the WoW Forever team, Raidbots, or MythicSim.
+        </footer>
+      </div>
+    </ToastProvider>
   );
 }

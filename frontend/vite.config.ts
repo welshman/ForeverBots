@@ -4,11 +4,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "/ForeverBots/",
   plugins: [react()],
-  worker: {
-    format: "es",
-  },
-  build: {
-    target: "es2022",
-    sourcemap: false,
-  },
+  worker: { format: "es" },
+  build: { target: "es2022", sourcemap: false },
 });
