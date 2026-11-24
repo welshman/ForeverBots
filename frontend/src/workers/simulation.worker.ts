@@ -41,6 +41,26 @@ workerSelf.onmessage = async (event: MessageEvent) => {
   const req = event.data.payload as SimulationRequest;
   const started = performance.now();
 
+  if (!req || typeof req.jobId !== "string" || !req.jobId || !req.profile || !req.options) {
+    postResult({
+      jobId: typeof req?.jobId === "string" ? req.jobId : "unknown",
+      ok: false,
+      statistics: { mean: 0 },
+      warnings: [],
+      errors: [
+        {
+          code: "invalid_request",
+          message: "The simulation request was incomplete or malformed.",
+        },
+      ],
+      rawInput: "",
+      rawOutput: "",
+      engineVersion: "unknown",
+      durationMs: 0,
+    });
+    return;
+  }
+
   try {
     postProgress({
       jobId: req.jobId,
@@ -111,7 +131,29 @@ workerSelf.onmessage = async (event: MessageEvent) => {
       );
     }
 
-    const parsed = JSON.parse(rawOutput);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawOutput);
+    } catch (err) {
+      postProgress({ jobId: req.jobId, phase: "failed", progress: 1 });
+      postResult({
+        jobId: req.jobId,
+        ok: false,
+        statistics: { mean: 0 },
+        warnings: [],
+        errors: [
+          {
+            code: "engine_output_invalid",
+            message: `The simulation engine returned output that could not be parsed: ${String(err)}`,
+          },
+        ],
+        rawInput,
+        rawOutput,
+        engineVersion,
+        durationMs: Math.round(performance.now() - started),
+      });
+      return;
+    }
 
     if (parsed.status === "refused") {
       const refusalErrors = (parsed.refusals ?? []).map(
@@ -120,6 +162,12 @@ workerSelf.onmessage = async (event: MessageEvent) => {
           message: r.reason ?? "Unsupported mechanic refused by coverage gate.",
         })
       );
+      if (!refusalErrors.length) {
+        refusalErrors.push({
+          code: "coverage_gate_refusal",
+          message: "The simulation was refused by the MythicSim Forever coverage gate.",
+        });
+      }
       postProgress({ jobId: req.jobId, phase: "failed", progress: 1 });
       postResult({
         jobId: req.jobId,
