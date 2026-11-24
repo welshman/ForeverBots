@@ -8,39 +8,13 @@ import {
 const MAX_SIMC_BYTES = 200_000;
 
 const KNOWN_CLASSES = new Set([
-  "druid",
-  "hunter",
-  "mage",
-  "paladin",
-  "priest",
-  "rogue",
-  "shaman",
-  "warlock",
-  "warrior",
+  "druid", "hunter", "mage", "paladin", "priest", "rogue", "shaman", "warlock", "warrior",
 ]);
 
 const GEAR_SLOTS = new Set([
-  "head",
-  "neck",
-  "shoulder",
-  "shoulders",
-  "back",
-  "chest",
-  "shirt",
-  "tabard",
-  "wrist",
-  "wrists",
-  "hands",
-  "waist",
-  "legs",
-  "feet",
-  "finger1",
-  "finger2",
-  "trinket1",
-  "trinket2",
-  "main_hand",
-  "off_hand",
-  "ranged",
+  "head", "neck", "shoulder", "shoulders", "back", "chest", "shirt", "tabard", "wrist", "wrists",
+  "hands", "waist", "legs", "feet", "finger1", "finger2", "trinket1", "trinket2",
+  "main_hand", "off_hand", "ranged",
 ]);
 
 function parseColonPairs(raw: string): Record<string, number> {
@@ -59,21 +33,9 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
   const issues: ParseIssue[] = [];
   if (input.length > MAX_SIMC_BYTES) {
     return {
-      characterName: "",
-      className: "",
-      spec: "",
-      level: 60,
-      race: "",
-      gear: [],
-      rawText: input.slice(0, 1000),
-      status: "unparseable",
-      issues: [
-        {
-          line: 1,
-          severity: "error",
-          message: `Profile exceeds maximum allowed size (${MAX_SIMC_BYTES} bytes).`,
-        },
-      ],
+      characterName: "", className: "", spec: "", level: 60, race: "", gear: [],
+      rawText: input.slice(0, 1000), status: "unparseable",
+      issues: [{ line: 1, severity: "error", message: `Profile exceeds maximum allowed size (${MAX_SIMC_BYTES} bytes).` }],
     };
   }
 
@@ -90,7 +52,6 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
   let professions: string | undefined;
   const gear: GearItem[] = [];
 
-  // Commented character sheet stats exported by SimulationCraft Addon (WoW Forever)
   let sheetBase: [number, number, number, number, number] | undefined;
   let sheetAttr: [number, number, number, number, number] | undefined;
   let sheetHealth: number | undefined;
@@ -109,42 +70,17 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
       if (eq !== -1) {
         const ck = commentBody.slice(0, eq).trim().toLowerCase();
         const cv = commentBody.slice(eq + 1).trim();
-
         if (ck === "character_stats") {
           const map = parseColonPairs(cv);
           if (map.health !== undefined) sheetHealth = map.health;
           if (map.mana !== undefined) sheetMana = map.mana;
-          if (
-            map.strength !== undefined &&
-            map.agility !== undefined &&
-            map.stamina !== undefined &&
-            map.intellect !== undefined &&
-            map.spirit !== undefined
-          ) {
-            sheetAttr = [
-              map.strength,
-              map.agility,
-              map.stamina,
-              map.intellect,
-              map.spirit,
-            ];
+          if (map.strength !== undefined && map.agility !== undefined && map.stamina !== undefined && map.intellect !== undefined && map.spirit !== undefined) {
+            sheetAttr = [map.strength, map.agility, map.stamina, map.intellect, map.spirit];
           }
         } else if (ck === "character_stats_base") {
           const map = parseColonPairs(cv);
-          if (
-            map.strength !== undefined &&
-            map.agility !== undefined &&
-            map.stamina !== undefined &&
-            map.intellect !== undefined &&
-            map.spirit !== undefined
-          ) {
-            sheetBase = [
-              map.strength,
-              map.agility,
-              map.stamina,
-              map.intellect,
-              map.spirit,
-            ];
+          if (map.strength !== undefined && map.agility !== undefined && map.stamina !== undefined && map.intellect !== undefined && map.spirit !== undefined) {
+            sheetBase = [map.strength, map.agility, map.stamina, map.intellect, map.spirit];
           }
         } else if (ck === "crit") {
           const map = parseColonPairs(cv);
@@ -157,11 +93,7 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
 
     const eqIdx = trimmed.indexOf("=");
     if (eqIdx === -1) {
-      issues.push({
-        line: lineNum,
-        severity: "warning",
-        message: `Ignored line without key=value syntax: "${trimmed.slice(0, 48)}"`,
-      });
+      issues.push({ line: lineNum, severity: "warning", message: `Ignored line without key=value syntax: "${trimmed.slice(0, 48)}"` });
       return;
     }
 
@@ -199,14 +131,14 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
         }
       }
 
+      if (!itemId) {
+        issues.push({ line: lineNum, severity: "warning", message: `Gear line for "${key}" is missing a valid item id.` });
+      }
+
       gear.push({
-        slot: key,
-        name: itemName,
-        itemId,
-        enchantId,
+        slot: key, name: itemName, itemId, enchantId,
         gemIds: gemIds.length ? gemIds : undefined,
-        raw: value,
-        line: lineNum,
+        raw: value, line: lineNum,
       });
       return;
     }
@@ -218,11 +150,7 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
       case "level": {
         const parsedLevel = Number(value);
         if (!Number.isInteger(parsedLevel) || parsedLevel < 1 || parsedLevel > 60) {
-          issues.push({
-            line: lineNum,
-            severity: "warning",
-            message: `Level "${value}" is outside WoW Forever bounds (1-60).`,
-          });
+          issues.push({ line: lineNum, severity: "warning", message: `Level "${value}" is outside WoW Forever bounds (1-60).` });
         } else {
           level = parsedLevel;
         }
@@ -253,22 +181,14 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
   });
 
   if (!className) {
-    issues.push({
-      line: 1,
-      severity: "error",
-      message: 'Missing character class declaration (e.g., mage="Frosty").',
-    });
+    issues.push({ line: 1, severity: "error", message: 'Missing character class declaration (e.g., mage="Frosty").' });
   }
 
   let characterSheet: CharacterSheetData | undefined;
   if (sheetBase && sheetAttr && sheetHealth !== undefined) {
     characterSheet = {
-      base: sheetBase,
-      attributes: sheetAttr,
-      health: sheetHealth,
-      mana: sheetMana ?? 0,
-      meleeCrit: sheetMeleeCrit ?? 5,
-      spellCrit: sheetSpellCrit ?? 5,
+      base: sheetBase, attributes: sheetAttr, health: sheetHealth,
+      mana: sheetMana ?? 0, meleeCrit: sheetMeleeCrit ?? 5, spellCrit: sheetSpellCrit ?? 5,
     };
   }
 
@@ -276,24 +196,9 @@ export function parseSimcProfile(input: string): ParsedSimcProfile {
   const hasWarnings = issues.some((i) => i.severity === "warning");
 
   return {
-    characterName,
-    className,
-    spec,
-    level,
-    race,
-    realm,
-    region,
-    talents,
-    glyphs,
-    professions,
-    gear,
-    characterSheet,
-    rawText: input,
-    status: hasErrors
-      ? "unparseable"
-      : hasWarnings
-      ? "partially-unsupported"
-      : "supported",
+    characterName, className, spec, level, race, realm, region, talents, glyphs, professions,
+    gear, characterSheet, rawText: input,
+    status: hasErrors ? "unparseable" : hasWarnings ? "partially-unsupported" : "supported",
     issues,
   };
 }

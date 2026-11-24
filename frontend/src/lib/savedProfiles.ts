@@ -20,33 +20,32 @@ export function loadSavedProfiles(): SavedProfile[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (item): item is SavedProfile =>
-        Boolean(item) &&
-        typeof item === "object" &&
+        Boolean(item) && typeof item === "object" &&
         typeof (item as SavedProfile).id === "string" &&
         typeof (item as SavedProfile).name === "string" &&
         typeof (item as SavedProfile).rawText === "string"
     );
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function persist(profiles: SavedProfile[]): void {
-  localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(profiles.slice(0, 20)));
+  try { localStorage.setItem(SAVED_PROFILES_KEY, JSON.stringify(profiles.slice(0, 50))); } catch { /* storage unavailable */ }
 }
 
 export function saveProfile(name: string, profile: ParsedSimcProfile): SavedProfile[] {
   const trimmed = name.trim() || profile.characterName || "Unnamed Profile";
   const next: SavedProfile = {
-    id: crypto.randomUUID(),
-    name: trimmed,
-    rawText: profile.rawText,
-    className: profile.className,
-    spec: profile.spec,
-    level: profile.level,
+    id: crypto.randomUUID(), name: trimmed, rawText: profile.rawText,
+    className: profile.className, spec: profile.spec, level: profile.level,
     savedAt: new Date().toISOString(),
   };
   const updated = [next, ...loadSavedProfiles()];
+  persist(updated);
+  return updated;
+}
+
+export function renameSavedProfile(id: string, newName: string): SavedProfile[] {
+  const updated = loadSavedProfiles().map(p => p.id === id ? { ...p, name: newName.trim() || p.name } : p);
   persist(updated);
   return updated;
 }
@@ -61,13 +60,30 @@ export function duplicateSavedProfile(id: string): SavedProfile[] {
   const list = loadSavedProfiles();
   const target = list.find(p => p.id === id);
   if (!target) return list;
-  const copy: SavedProfile = {
-    ...target,
-    id: crypto.randomUUID(),
-    name: `${target.name} (Copy)`,
-    savedAt: new Date().toISOString(),
-  };
+  const copy: SavedProfile = { ...target, id: crypto.randomUUID(), name: `${target.name} (Copy)`, savedAt: new Date().toISOString() };
   const updated = [copy, ...list];
   persist(updated);
   return updated;
+}
+
+export function exportProfilesToJson(profiles: SavedProfile[]): string {
+  return JSON.stringify(profiles, null, 2);
+}
+
+export function importProfilesFromJson(json: string): SavedProfile[] {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) return loadSavedProfiles();
+    const valid = parsed.filter((item): item is SavedProfile =>
+      Boolean(item) && typeof item === "object" &&
+      typeof (item as SavedProfile).id === "string" &&
+      typeof (item as SavedProfile).name === "string" &&
+      typeof (item as SavedProfile).rawText === "string"
+    );
+    const existing = loadSavedProfiles();
+    const existingIds = new Set(existing.map(p => p.id));
+    const merged = [...valid.filter(p => !existingIds.has(p.id)), ...existing];
+    persist(merged);
+    return merged;
+  } catch { return loadSavedProfiles(); }
 }
