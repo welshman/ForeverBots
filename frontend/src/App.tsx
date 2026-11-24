@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import QuickSimPage from "./pages/QuickSimPage";
 import DroptimizerPage from "./pages/DroptimizerPage";
 import AboutPage from "./pages/AboutPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import { loadPreferences, savePreferences } from "./lib/storage";
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -77,7 +78,7 @@ export default function App() {
             <Route path="/droptimizer" element={<DroptimizerPage />} />
             <Route path="/advanced-sim" element={<LegacySimRedirect advanced />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="*" element={<HomePage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </ErrorBoundary>
       </main>
