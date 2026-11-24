@@ -45,6 +45,19 @@ const SLOT_ORDER = [
   "ranged",
 ] as const;
 
+function clampInt(value: number, minimum: number, maximum: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(minimum, Math.min(maximum, Math.round(value)));
+}
+
+function sanitizeItemId(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function sanitizeSeed(value: number | undefined): number {
+  return value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value > 0 ? value : 42;
+}
+
 function dotRefreshAction(spellId: number) {
   return {
     action: {
@@ -193,9 +206,16 @@ export function buildForeverRequestJson(
   options: SimulationOptions,
   overrides: GearOverride[] = []
 ): string {
+  if (!profile) {
+    throw new Error("A parsed character profile is required to build a simulation request.");
+  }
+  if (!profile.className || typeof profile.className !== "string") {
+    throw new Error("The imported profile is missing a character class.");
+  }
+
   const lowerClass = profile.className.toLowerCase();
   const classEnum = CLASS_ENUM[lowerClass] ?? "ClassMage";
-  const raceEnum = RACE_ENUM[profile.race.toLowerCase()] ?? "RaceHuman";
+  const raceEnum = RACE_ENUM[(profile.race ?? "").toLowerCase()] ?? "RaceHuman";
 
   const slotMap = new Map<string, { id?: number; enchant?: number }>();
   for (const item of profile.gear) {
@@ -205,15 +225,19 @@ export function buildForeverRequestJson(
         : item.slot === "wrists"
         ? "wrist"
         : item.slot;
-    if (item.itemId) {
+    const itemId = sanitizeItemId(item.itemId);
+    if (itemId) {
       slotMap.set(normalizedSlot, {
-        id: item.itemId,
+        id: itemId,
         enchant: item.enchantId,
       });
     }
   }
   for (const ov of overrides) {
-    slotMap.set(ov.slot, { id: ov.itemId, enchant: ov.enchantId });
+    const itemId = sanitizeItemId(ov.itemId);
+    if (itemId) {
+      slotMap.set(ov.slot, { id: itemId, enchant: ov.enchantId });
+    }
   }
 
   const items = SLOT_ORDER.map((slot) => {
@@ -222,9 +246,15 @@ export function buildForeverRequestJson(
     return entry.enchant ? { id: entry.id, enchant: entry.enchant } : { id: entry.id };
   });
 
+  const durationSeconds = clampInt(options.durationSeconds, 1, 600, 180);
+  const durationVariancePct = clampInt(options.durationVariancePct, 0, 50, 20);
+  const latencyMs = clampInt(options.latencyMs, 0, 500, 100);
+  const iterations = clampInt(options.iterations, 1, 10_000, 500);
+  const targetCount = clampInt(options.targetCount, 1, 5, 1);
+  const seed = sanitizeSeed(options.seed);
   const durationVariation = Math.max(
     0,
-    Math.min(120, Math.round((options.durationSeconds * options.durationVariancePct) / 100))
+    Math.min(120, Math.round((durationSeconds * durationVariancePct) / 100))
   );
   const playerLevel = profile.level || 60;
   const targetLevel = playerLevel === 60 ? 63 : Math.min(63, playerLevel + 3);
@@ -234,7 +264,7 @@ export function buildForeverRequestJson(
     class: classEnum,
     race: raceEnum,
     level: playerLevel,
-    reactionTimeMs: Math.max(10, Math.min(1000, options.latencyMs || 100)),
+    reactionTimeMs: Math.max(10, Math.min(1000, latencyMs || 100)),
     distanceFromTarget: ["rogue", "warrior", "paladin"].includes(lowerClass) ? 0 : 20,
     equipment: { items },
     rotation: {
@@ -268,14 +298,14 @@ export function buildForeverRequestJson(
 
   const request = {
     encounter: {
-      duration: options.durationSeconds,
+      duration: durationSeconds,
       durationVariation,
       executeProportion20: 0.2,
       executeProportion25: 0.25,
       executeProportion35: 0.35,
       executeProportion45: 0.45,
       executeProportion90: 0.9,
-      targets: Array.from({ length: Math.max(1, Math.min(5, options.targetCount)) }, (_, i) => ({
+      targets: Array.from({ length: targetCount }, (_, i) => ({
         id: 213336 + i,
         name: `Target ${i + 1}`,
         level: targetLevel,
@@ -286,7 +316,7 @@ export function buildForeverRequestJson(
         swingSpeed: 2,
         stats: [
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 805, 0, 0,
-          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3731, 0, 127393, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3731, 0, 127393, 0, 0, 0, 0, 0, 0, 0,
         ],
       })),
     },
@@ -295,8 +325,8 @@ export function buildForeverRequestJson(
     },
     simOptions: {
       debugFirstIteration: true,
-      iterations: Math.max(1, Math.min(10_000, options.iterations)),
-      randomSeed: String(options.seed || 42),
+      iterations,
+      randomSeed: String(seed),
     },
   };
 
