@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useToast } from "../hooks/useToast";
+import { downloadFile } from "../lib/historyExport";
 
 type Event = { time: number; ability: string; detail: string };
 export function parseTimeline(logs: string, names: Record<number, string>): Event[] {
@@ -11,6 +13,7 @@ export function parseTimeline(logs: string, names: Record<number, string>): Even
   });
 }
 export default function AbilityTimeline({ logs, names }: { logs: string; names: Record<number, string> }) {
+  const { show } = useToast();
   const [raw, setRaw] = useState(false);
   const [limit, setLimit] = useState(50);
   const [filter, setFilter] = useState("");
@@ -20,18 +23,29 @@ export default function AbilityTimeline({ logs, names }: { logs: string; names: 
     return q ? events.filter((e) => e.ability.toLowerCase().includes(q) || e.detail.toLowerCase().includes(q)) : events;
   }, [events, filter]);
 
+  const copyFiltered = () => {
+    const lines = filtered.slice(0, limit).map(e => `${e.time.toFixed(2)}s | ${e.ability} | ${e.detail}`);
+    navigator.clipboard?.writeText(lines.join("\n")).then(() => show("Timeline copied."));
+  };
+
+  const exportFiltered = () => {
+    const csv = ["Time,Ability,Detail", ...filtered.slice(0, limit).map(e => `"${e.time.toFixed(2)}","${e.ability.replace(/"/g, '""')}","${e.detail.replace(/"/g, '""')}"`)].join("\n");
+    downloadFile(csv, "foreverbots-timeline.csv", "text/csv;charset=utf-8;");
+    show("Timeline CSV downloaded.");
+  };
+
   return <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-obsidian-900/85 p-5 space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h3 className="font-semibold">Sample Ability Log</h3>
       <div className="flex items-center gap-3">
         {!raw && events.length > 0 && (
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => { setFilter(e.target.value); setLimit(50); }}
-            placeholder="Filter ability..."
-            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
-          />
+          <input type="text" value={filter} onChange={(e) => { setFilter(e.target.value); setLimit(50); }} placeholder="Filter ability..." className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70" />
+        )}
+        {!raw && filtered.length > 0 && (
+          <>
+            <button type="button" onClick={copyFiltered} className="text-xs text-gold-400 hover:underline">Copy</button>
+            <button type="button" onClick={exportFiltered} className="text-xs text-gold-400 hover:underline">Export CSV</button>
+          </>
         )}
         <button type="button" onClick={() => setRaw(!raw)} className="text-sm text-gold-400 hover:underline">{raw ? "Show timeline" : "Show raw log"}</button>
       </div>

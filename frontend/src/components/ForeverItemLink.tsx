@@ -18,6 +18,7 @@ export default function ForeverItemLink({
       href={`https://www.wowhead.com/forever/item=${itemId}`}
       target="_blank"
       rel="noopener noreferrer"
+      title={`View ${label} on Wowhead Forever`}
       aria-label={`${label} on Wowhead Forever`}
       className="text-gold-400 hover:underline focus-visible:outline focus-visible:outline-2"
     >

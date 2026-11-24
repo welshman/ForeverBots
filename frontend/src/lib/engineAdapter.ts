@@ -9,6 +9,8 @@ export class SimulationRunner {
   private timeoutHandle: number | null = null;
   private activeJobId: string | null = null;
   private pendingCancel: (() => void) | null = null;
+  private retryCount = 0;
+  private maxRetries = 2;
 
   private ensureWorker(): Worker {
     if (!this.worker) {
@@ -20,18 +22,17 @@ export class SimulationRunner {
     return this.worker;
   }
 
+  public get isRunning(): boolean {
+    return this.activeJobId !== null;
+  }
+
   private cancelledResult(request: SimulationRequest, durationMs = 0): SimulationResult {
     return {
       jobId: request.jobId,
       ok: false,
       statistics: { mean: 0 },
       warnings: [],
-      errors: [
-        {
-          code: "cancelled",
-          message: "Simulation was cancelled or replaced by a newer run.",
-        },
-      ],
+      errors: [{ code: "cancelled", message: "Simulation was cancelled or replaced by a newer run." }],
       rawInput: request.options.preparedJsonOverride ?? request.profile.rawText,
       rawOutput: "",
       engineVersion: "unknown",
@@ -45,6 +46,7 @@ export class SimulationRunner {
       this.timeoutHandle = null;
     }
     this.activeJobId = null;
+    this.retryCount = 0;
     const resolveCancelled = this.pendingCancel;
     this.pendingCancel = null;
     if (this.worker) {
@@ -80,14 +82,10 @@ export class SimulationRunner {
           ok: false,
           statistics: { mean: 0 },
           warnings: [],
-          errors: [
-            {
-              code: wasActive ? "timeout" : "cancelled",
-              message: wasActive
-                ? `Simulation timed out after ${Math.round(timeoutMs / 1000)}s.`
-                : "Simulation was cancelled or replaced by a newer run.",
-            },
-          ],
+          errors: [{
+            code: wasActive ? "timeout" : "cancelled",
+            message: wasActive ? `Simulation timed out after ${Math.round(timeoutMs / 1000)}s.` : "Simulation was cancelled or replaced by a newer run.",
+          }],
           rawInput: request.options.preparedJsonOverride ?? request.profile.rawText,
           rawOutput: "",
           engineVersion: "unknown",
@@ -104,6 +102,7 @@ export class SimulationRunner {
           if (this.timeoutHandle) window.clearTimeout(this.timeoutHandle);
           this.timeoutHandle = null;
           this.activeJobId = null;
+          this.retryCount = 0;
           this.pendingCancel = null;
           resolve(msg.payload as SimulationResult);
         }
@@ -116,17 +115,20 @@ export class SimulationRunner {
         this.activeJobId = null;
         this.pendingCancel = null;
         this.cancel();
+        if (this.retryCount < this.maxRetries) {
+          this.retryCount += 1;
+          const delay = 500 * this.retryCount;
+          window.setTimeout(() => {
+            resolve(this.run(request, onProgress, timeoutMs));
+          }, delay);
+          return;
+        }
         resolve({
           jobId: request.jobId,
           ok: false,
           statistics: { mean: 0 },
           warnings: [],
-          errors: [
-            {
-              code: "worker_crash",
-              message: `Web Worker crashed: ${err.message || "Unknown error"}. Worker has been reset.`,
-            },
-          ],
+          errors: [{ code: "worker_crash", message: `Web Worker crashed after ${this.maxRetries} retries: ${err.message || "Unknown error"}.` }],
           rawInput: request.options.preparedJsonOverride ?? request.profile.rawText,
           rawOutput: "",
           engineVersion: "unknown",
@@ -143,12 +145,7 @@ export class SimulationRunner {
     onProgress: (p: SimulationProgress) => void
   ): Promise<SimulationResult> {
     const baseUrl = import.meta.env.VITE_REMOTE_ENGINE_URL as string;
-    onProgress({
-      jobId: request.jobId,
-      phase: "simulating",
-      progress: 0.3,
-      message: "Submitting job to remote MythicSim-compatible API...",
-    });
+    onProgress({ jobId: request.jobId, phase: "simulating", progress: 0.3, message: "Submitting job to remote MythicSim-compatible API..." });
     const started = performance.now();
     try {
       const resp = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/simulate`, {
@@ -159,63 +156,28 @@ export class SimulationRunner {
       const text = await resp.text();
       if (!resp.ok) {
         return {
-          jobId: request.jobId,
-          ok: false,
-          statistics: { mean: 0 },
-          warnings: [],
-          errors: [
-            {
-              code: `http_${resp.status}`,
-              message: `Remote engine returned HTTP ${resp.status}.`,
-            },
-          ],
-          rawInput: JSON.stringify(request),
-          rawOutput: text,
-          engineVersion: "remote",
-          durationMs: Math.round(performance.now() - started),
+          jobId: request.jobId, ok: false, statistics: { mean: 0 }, warnings: [],
+          errors: [{ code: `http_${resp.status}`, message: `Remote engine returned HTTP ${resp.status}.` }],
+          rawInput: JSON.stringify(request), rawOutput: text, engineVersion: "remote", durationMs: Math.round(performance.now() - started),
         };
       }
-
       let data: SimulationResult;
       try {
         data = JSON.parse(text) as SimulationResult;
       } catch {
         return {
-          jobId: request.jobId,
-          ok: false,
-          statistics: { mean: 0 },
-          warnings: [],
-          errors: [
-            {
-              code: "invalid_remote_response",
-              message: "Remote engine returned a response that could not be parsed as JSON.",
-            },
-          ],
-          rawInput: JSON.stringify(request),
-          rawOutput: text,
-          engineVersion: "remote",
-          durationMs: Math.round(performance.now() - started),
+          jobId: request.jobId, ok: false, statistics: { mean: 0 }, warnings: [],
+          errors: [{ code: "invalid_remote_response", message: "Remote engine returned a response that could not be parsed as JSON." }],
+          rawInput: JSON.stringify(request), rawOutput: text, engineVersion: "remote", durationMs: Math.round(performance.now() - started),
         };
       }
-
       onProgress({ jobId: request.jobId, phase: "complete", progress: 1 });
       return data;
     } catch (e) {
       return {
-        jobId: request.jobId,
-        ok: false,
-        statistics: { mean: 0 },
-        warnings: [],
-        errors: [
-          {
-            code: "network_error",
-            message: `Remote engine request failed: ${String(e)}`,
-          },
-        ],
-        rawInput: JSON.stringify(request),
-        rawOutput: "",
-        engineVersion: "remote",
-        durationMs: Math.round(performance.now() - started),
+        jobId: request.jobId, ok: false, statistics: { mean: 0 }, warnings: [],
+        errors: [{ code: "network_error", message: `Remote engine request failed: ${String(e)}` }],
+        rawInput: JSON.stringify(request), rawOutput: "", engineVersion: "remote", durationMs: Math.round(performance.now() - started),
       };
     }
   }

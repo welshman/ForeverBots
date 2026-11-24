@@ -1,4 +1,5 @@
 import ForeverItemLink from "./ForeverItemLink";
+import Tooltip from "./Tooltip";
 import type { ForeverDungeonItem } from "../data/foreverDungeonSources";
 import { simulationSlotsForForeverSlot, type SimulationSlot } from "../data/foreverSlotMapping";
 
@@ -51,12 +52,14 @@ export default function GearItemCard({ item, selectedSlot, disabled = false, onS
         {!supported ? (
           <p className="rounded-lg bg-slate-500/10 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">This slot is not supported for automatic comparison.</p>
         ) : choices.length === 1 ? (
-          <button type="button" disabled={disabled} aria-pressed={selected} aria-label={`${selected ? "Remove" : "Select"} ${item.name}`} onClick={() => selected ? onRemove() : onSelect(choices[0])} className={`w-full rounded-xl border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 disabled:cursor-not-allowed disabled:opacity-50 ${selected ? "border-gold-500 bg-gold-500 text-obsidian-950" : "border-slate-300 hover:border-gold-500 dark:border-slate-700"}`}>
-            {selected ? "Selected · Remove" : "Select item"}
-          </button>
+          <Tooltip label={selected ? "Click to remove this item from comparison" : "Click to select this item for comparison"}>
+            <button type="button" disabled={disabled} aria-pressed={selected} aria-label={`${selected ? "Remove" : "Select"} ${item.name}`} onClick={() => selected ? onRemove() : onSelect(choices[0])} className={`w-full rounded-xl border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 disabled:cursor-not-allowed disabled:opacity-50 ${selected ? "border-gold-500 bg-gold-500 text-obsidian-950" : "border-slate-300 hover:border-gold-500 dark:border-slate-700"}`}>
+              {selected ? "Selected · Remove" : "Select item"}
+            </button>
+          </Tooltip>
         ) : (
           <>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Choose the equipped slot to compare:</p>
+            <Tooltip label="Choose which equipped slot this item replaces for the comparison"><p className="text-xs text-slate-500 dark:text-slate-400">Choose the equipped slot to compare:</p></Tooltip>
             <div role="group" aria-label={`Target slot for ${item.name}`} className="flex gap-2">
               {choices.map((slot) => (
                 <button key={slot} type="button" disabled={disabled} aria-pressed={selectedSlot === slot} onClick={() => selectedSlot === slot ? onRemove() : onSelect(slot)} className={`flex-1 rounded-xl border px-2 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 disabled:cursor-not-allowed disabled:opacity-50 ${selectedSlot === slot ? "border-gold-500 bg-gold-500 text-obsidian-950" : "border-slate-300 hover:border-gold-500 dark:border-slate-700"}`}>
