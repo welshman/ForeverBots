@@ -1,0 +1,10 @@
+{
+  "name": "ForeverBots",
+  "short_name": "ForeverBots",
+  "description": "Client-side WoW Forever combat simulation",
+  "start_url": "/ForeverBots/",
+  "display": "standalone",
+  "background_color": "#070a10",
+  "theme_color": "#d4a024",
+  "icons": []
+}
