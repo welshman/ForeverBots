@@ -5,11 +5,6 @@ export default function NotFoundPage() {
     <section aria-labelledby="not-found-heading" className="mx-auto max-w-xl space-y-4 py-12">
       <h1 id="not-found-heading" className="text-3xl font-bold">Page not found</h1>
       <p>This address does not match a ForeverBots page.</p>
-      <nav aria-label="Find your way back" className="flex flex-wrap gap-4">
-        <Link className="underline" to="/">Home</Link>
-        <Link className="underline" to="/sim">Sim</Link>
-        <Link className="underline" to="/droptimizer">Droptimizer</Link>
-      </nav>
     </section>
   );
 }
