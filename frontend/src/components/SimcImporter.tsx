@@ -24,6 +24,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
   const [profile, setProfile] = useState<ParsedSimcProfile | null>(null);
   const [sheet, setSheet] = useState<CharacterSheetData>(DEFAULT_SHEET);
   const [dragging, setDragging] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
 
   const emitProfile = (baseProfile: ParsedSimcProfile, currentSheet: CharacterSheetData) => {
     const next: ParsedSimcProfile =
@@ -36,6 +37,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
 
   const handleParse = (value: string) => {
     setText(value);
+    setImportMessage("");
     try {
       if (value.trim()) {
         localStorage.setItem(LAST_SIMC_KEY, value);
@@ -47,6 +49,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
     }
     if (!value.trim()) {
       setProfile(null);
+      setImportMessage("Profile cleared.");
       return;
     }
     const parsed = parseSimcProfile(value);
@@ -54,6 +57,11 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
       setSheet(parsed.characterSheet);
     }
     emitProfile(parsed, parsed.characterSheet ?? sheet);
+    setImportMessage(
+      parsed.status === "unparseable"
+        ? "Could not recognize a complete /simc profile. Paste the full addon output."
+        : `Profile imported: ${parsed.gear.length} gear slot${parsed.gear.length === 1 ? "" : "s"} detected.`
+    );
   };
 
   useEffect(() => {
@@ -75,10 +83,17 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
     }
   };
 
+  const readFile = (file: File) => {
+    file.text()
+      .then(handleParse)
+      .catch(() => setImportMessage(`Could not read “${file.name}”. Try copying the /simc output into the text box instead.`));
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    file.text().then(handleParse);
+    readFile(file);
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -86,7 +101,7 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
     setDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
-    file.text().then(handleParse);
+    readFile(file);
   };
 
   return (
@@ -138,6 +153,8 @@ export default function SimcImporter({ onParsed }: SimcImporterProps) {
         placeholder="Paste your WoW Forever /simc output here, or drag and drop a .simc / .txt file..."
         className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70"
       />
+
+      <p role="status" aria-live="polite" className="text-xs text-slate-500 dark:text-slate-400">{importMessage}</p>
 
       {profile && (
         <div className="rounded-2xl border border-slate-200 dark:border-gold-500/20 bg-slate-50/70 dark:bg-obsidian-950/70 p-4 text-sm space-y-3">
