@@ -131,7 +131,7 @@ workerSelf.onmessage = async (event: MessageEvent) => {
       );
     }
 
-    let parsed: unknown;
+    let parsed: any;
     try {
       parsed = JSON.parse(rawOutput);
     } catch (err) {
