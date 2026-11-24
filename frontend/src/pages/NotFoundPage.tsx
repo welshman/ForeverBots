@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 export default function NotFoundPage() {
   return (
     <section aria-labelledby="not-found-heading" className="mx-auto max-w-xl space-y-4 py-12">
