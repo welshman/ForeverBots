@@ -20,7 +20,6 @@ import {
   saveProfile,
 } from "../lib/savedProfiles";
 import { appendHistory, loadAdvancedDraft, loadHistory, saveAdvancedDraft } from "../lib/storage";
-import { loadPresets, savePreset, deletePreset, SimPreset } from "../lib/presets";
 import { buildShareUrl, decodeOptionsFromUrl } from "../lib/shareUrl";
 import { exportHistoryToCsv, exportHistoryToJson, downloadFile } from "../lib/historyExport";
 import { ParsedSimcProfile, SimulationProgress, SimulationResult } from "../types/simulation";
@@ -75,8 +74,6 @@ export default function QuickSimPage() {
   const [history, setHistory] = useState<SimulationResult[]>(() => loadHistory());
   const [historyQuery, setHistoryQuery] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>(() => loadSavedProfiles());
-  const [presets, setPresets] = useState<SimPreset[]>(() => loadPresets());
-  const [presetName, setPresetName] = useState("");
   const [profileName, setProfileName] = useState("");
   const [running, setRunning] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
@@ -248,18 +245,6 @@ export default function QuickSimPage() {
     } catch { show("Could not load saved profile.", "error"); }
   };
 
-  const handleSavePreset = () => {
-    if (!validOptions) return;
-    setPresets(savePreset(presetName || "Preset", options));
-    setPresetName("");
-    show("Preset saved.");
-  };
-
-  const handleApplyPreset = (preset: SimPreset) => {
-    setOptions({ duration: preset.duration, iterations: preset.iterations, variancePct: preset.variancePct, latencyMs: preset.latencyMs, seed: preset.seed });
-    show(`Preset "${preset.name}" applied.`);
-  };
-
   const field = (key: keyof Options, label: string, presets: readonly number[] = []) => (
     <div className="space-y-1.5">
       <label htmlFor={`quick-${key}`} className="text-xs block text-slate-500 dark:text-slate-400">{label}</label>
@@ -322,28 +307,6 @@ export default function QuickSimPage() {
                 <button type="button" onClick={() => setSavedProfiles(duplicateSavedProfile(saved.id))} className={secondary}>Duplicate</button>
                 <button type="button" onClick={() => setSavedProfiles(deleteSavedProfile(saved.id))} className="text-xs px-2 py-1 rounded-lg text-rose-400 hover:bg-rose-500/10">Delete</button>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-
-    <section className={panel} aria-label="Simulation presets">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Presets</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <input type="text" aria-label="Preset name" placeholder="Preset name" value={presetName} onChange={e => setPresetName(e.target.value)} className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-gold-500/70" />
-          <button type="button" onClick={handleSavePreset} disabled={!validOptions} className={secondary}>Save Preset</button>
-        </div>
-      </div>
-      {presets.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-slate-400">No presets yet. Configure options above and click Save Preset.</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {presets.map(preset => (
-            <div key={preset.id} className="flex items-center gap-1">
-              <button type="button" onClick={() => handleApplyPreset(preset)} className={`${secondary} border-gold-500/40 text-gold-400`}>{preset.name}</button>
-              <button type="button" aria-label={`Delete preset ${preset.name}`} onClick={() => setPresets(deletePreset(preset.id))} className="text-xs px-1.5 py-1 rounded text-rose-400 hover:bg-rose-500/10">×</button>
             </div>
           ))}
         </div>
