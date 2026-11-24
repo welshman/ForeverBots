@@ -7,6 +7,7 @@ import {
 export class SimulationRunner {
   private worker: Worker | null = null;
   private timeoutHandle: number | null = null;
+  private activeJobId: string | null = null;
 
   private ensureWorker(): Worker {
     if (!this.worker) {
@@ -18,11 +19,31 @@ export class SimulationRunner {
     return this.worker;
   }
 
+  private cancelledResult(request: SimulationRequest, durationMs = 0): SimulationResult {
+    return {
+      jobId: request.jobId,
+      ok: false,
+      statistics: { mean: 0 },
+      warnings: [],
+      errors: [
+        {
+          code: "cancelled",
+          message: "Simulation was cancelled or replaced by a newer run.",
+        },
+      ],
+      rawInput: request.options.preparedJsonOverride ?? request.profile.rawText,
+      rawOutput: "",
+      engineVersion: "unknown",
+      durationMs,
+    };
+  }
+
   public cancel(): void {
     if (this.timeoutHandle) {
       window.clearTimeout(this.timeoutHandle);
       this.timeoutHandle = null;
     }
+    this.activeJobId = null;
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
@@ -40,10 +61,12 @@ export class SimulationRunner {
     }
 
     this.cancel();
+    this.activeJobId = request.jobId;
     const worker = this.ensureWorker();
 
     return new Promise((resolve) => {
       this.timeoutHandle = window.setTimeout(() => {
+        const wasActive = this.activeJobId === request.jobId;
         this.cancel();
         resolve({
           jobId: request.jobId,
@@ -52,8 +75,10 @@ export class SimulationRunner {
           warnings: [],
           errors: [
             {
-              code: "timeout",
-              message: `Simulation timed out after ${Math.round(timeoutMs / 1000)}s.`,
+              code: wasActive ? "timeout" : "cancelled",
+              message: wasActive
+                ? `Simulation timed out after ${Math.round(timeoutMs / 1000)}s.`
+                : "Simulation was cancelled or replaced by a newer run.",
             },
           ],
           rawInput: request.options.preparedJsonOverride ?? request.profile.rawText,
@@ -65,16 +90,22 @@ export class SimulationRunner {
 
       worker.onmessage = (event: MessageEvent) => {
         const msg = event.data;
+        if (this.activeJobId !== request.jobId) return;
         if (msg.type === "progress") {
           onProgress(msg.payload as SimulationProgress);
         } else if (msg.type === "result") {
           if (this.timeoutHandle) window.clearTimeout(this.timeoutHandle);
+          this.timeoutHandle = null;
+          this.activeJobId = null;
           resolve(msg.payload as SimulationResult);
         }
       };
 
       worker.onerror = (err) => {
+        if (this.activeJobId !== request.jobId) return;
         if (this.timeoutHandle) window.clearTimeout(this.timeoutHandle);
+        this.timeoutHandle = null;
+        this.activeJobId = null;
         this.cancel();
         resolve({
           jobId: request.jobId,
@@ -135,7 +166,29 @@ export class SimulationRunner {
           durationMs: Math.round(performance.now() - started),
         };
       }
-      const data = JSON.parse(text) as SimulationResult;
+
+      let data: SimulationResult;
+      try {
+        data = JSON.parse(text) as SimulationResult;
+      } catch {
+        return {
+          jobId: request.jobId,
+          ok: false,
+          statistics: { mean: 0 },
+          warnings: [],
+          errors: [
+            {
+              code: "invalid_remote_response",
+              message: "Remote engine returned a response that could not be parsed as JSON.",
+            },
+          ],
+          rawInput: JSON.stringify(request),
+          rawOutput: text,
+          engineVersion: "remote",
+          durationMs: Math.round(performance.now() - started),
+        };
+      }
+
       onProgress({ jobId: request.jobId, phase: "complete", progress: 1 });
       return data;
     } catch (e) {
