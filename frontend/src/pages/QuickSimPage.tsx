@@ -70,6 +70,7 @@ export default function QuickSimPage() {
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>(() => loadSavedProfiles());
   const [profileName, setProfileName] = useState("");
   const [running, setRunning] = useState(false);
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const busy = useRef(false);
   const [message, setMessage] = useState("");
   const validOptions = (Object.keys(DEFAULTS) as (keyof Options)[]).every(key => valid(key, options[key]));
@@ -139,12 +140,12 @@ export default function QuickSimPage() {
         },
         options: {
           fightStyle: "Patchwerk",
-          durationSeconds: 180,
-          durationVariancePct: 20,
+          durationSeconds: options.duration,
+          durationVariancePct: options.variancePct,
           targetCount: 1,
-          iterations: 1000,
-          latencyMs: 50,
-          seed: 1,
+          iterations: options.iterations,
+          latencyMs: options.latencyMs,
+          seed: options.seed,
           preparedJsonOverride: advancedJson,
         },
       }, setAdvancedProgress);
@@ -402,10 +403,23 @@ export default function QuickSimPage() {
 
     {history.length > 0 && <section className={panel} aria-label="Recent simulations">
       <div className="flex justify-between items-center gap-2"><h2 className="text-sm font-semibold">Recent Simulations</h2>
-        <button type="button" className="text-xs text-slate-400 hover:text-rose-400" onClick={() => {
-          try { localStorage.removeItem("foreverbots:history:v1"); setHistory([]); setCompareBaseline(null); }
-          catch { setMessage("Browser history could not be cleared."); }
-        }}>Clear history</button>
+        {confirmClearHistory ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Clear all saved simulations?</span>
+            <button type="button" className={secondary} onClick={() => setConfirmClearHistory(false)}>Cancel</button>
+            <button type="button" className="text-xs px-2 py-1 rounded-lg text-rose-400 hover:bg-rose-500/10" onClick={() => {
+              try {
+                localStorage.removeItem("foreverbots:history:v1");
+                setHistory([]);
+                setCompareBaseline(null);
+                setConfirmClearHistory(false);
+                setMessage("Simulation history cleared.");
+              } catch { setMessage("Browser history could not be cleared."); }
+            }}>Clear history</button>
+          </div>
+        ) : (
+          <button type="button" className="text-xs text-slate-400 hover:text-rose-400" onClick={() => setConfirmClearHistory(true)}>Clear history</button>
+        )}
       </div>
       <div className="divide-y divide-slate-200 dark:divide-slate-800">{history.slice(0, 8).map(item => {
         const selected = result?.jobId === item.jobId;
