@@ -72,6 +72,8 @@ export default function QuickSimPage() {
   const [running, setRunning] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const busy = useRef(false);
+  const activeNormalJobRef = useRef<string | null>(null);
+  const activeAdvancedJobRef = useRef<string | null>(null);
   const [message, setMessage] = useState("");
   const validOptions = (Object.keys(DEFAULTS) as (keyof Options)[]).every(key => valid(key, options[key]));
 
@@ -97,17 +99,24 @@ export default function QuickSimPage() {
 
   const handleRun = async () => {
     if (!profile || profile.status === "unparseable" || busy.current || !validOptions) return;
+    const jobId = crypto.randomUUID();
+    activeNormalJobRef.current = jobId;
     busy.current = true;
     setRunning(true);
     setMessage("");
     setResult(null);
     try {
       const response = await simulationRunner.run({
-        jobId: crypto.randomUUID(), profile,
+        jobId,
+        profile,
         options: { fightStyle: "Patchwerk", durationSeconds: options.duration,
           durationVariancePct: options.variancePct, targetCount: 1,
           iterations: options.iterations, latencyMs: options.latencyMs, seed: options.seed },
       }, setProgress);
+      if (activeNormalJobRef.current !== jobId) {
+        setMessage("Simulation cancelled.");
+        return;
+      }
       setResult(response);
       try { appendHistory(response); setHistory(loadHistory()); }
       catch { setMessage("Simulation completed, but browser history could not be saved."); }
@@ -116,17 +125,20 @@ export default function QuickSimPage() {
     } finally {
       busy.current = false;
       setRunning(false);
+      activeNormalJobRef.current = null;
     }
   };
 
   const handleRunAdvanced = async () => {
     if (!advancedJson.trim() || advancedRunning) return;
+    const jobId = crypto.randomUUID();
+    activeAdvancedJobRef.current = jobId;
     setAdvancedRunning(true);
     setAdvancedResult(null);
     setAdvancedMessage("");
     try {
       const response = await simulationRunner.run({
-        jobId: crypto.randomUUID(),
+        jobId,
         profile: {
           characterName: "Advanced",
           className: "mage",
@@ -149,13 +161,30 @@ export default function QuickSimPage() {
           preparedJsonOverride: advancedJson,
         },
       }, setAdvancedProgress);
+      if (activeAdvancedJobRef.current !== jobId) {
+        setAdvancedMessage("Simulation cancelled.");
+        return;
+      }
       setAdvancedResult(response);
     } catch (error) {
       setAdvancedMessage(error instanceof Error ? error.message : "Advanced simulation failed. Please try again.");
     } finally {
       setAdvancedRunning(false);
       setAdvancedProgress(null);
+      activeAdvancedJobRef.current = null;
     }
+  };
+
+  const cancelNormal = () => {
+    if (!running) return;
+    simulationRunner.cancel();
+    setMessage("Simulation cancelled.");
+  };
+
+  const cancelAdvanced = () => {
+    if (!advancedRunning) return;
+    simulationRunner.cancel();
+    setAdvancedMessage("Simulation cancelled.");
   };
 
   useEffect(() => {
@@ -163,9 +192,10 @@ export default function QuickSimPage() {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
         void handleRun();
-      } else if (event.key === "Escape" && running) {
+      } else if (event.key === "Escape" && (running || advancedRunning)) {
         event.preventDefault();
-        simulationRunner.cancel();
+        if (running) cancelNormal();
+        else cancelAdvanced();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -296,7 +326,7 @@ export default function QuickSimPage() {
           className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:opacity-50">
           {running ? "Simulating..." : "Run Sim"}
         </button>
-        {running ? <button type="button" onClick={() => simulationRunner.cancel()}
+        {running ? <button type="button" onClick={cancelNormal}
           className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>
           : <span className="text-xs text-slate-500">Shortcut: Ctrl/Cmd+Enter</span>}
         <button type="button" aria-expanded={showMoreOptions} aria-controls="quick-more-options"
@@ -330,6 +360,7 @@ export default function QuickSimPage() {
             <button type="button" disabled={!advancedJson.trim() || advancedRunning} onClick={() => void handleRunAdvanced()} className="px-4 py-2 rounded-lg bg-gold-500 text-obsidian-950 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50">
               {advancedRunning ? "Running Prepared JSON…" : "Run Prepared JSON in WASM"}
             </button>
+            {advancedRunning && <button type="button" onClick={cancelAdvanced} className="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">Cancel (Esc)</button>}
             <p role="status" className="text-xs text-slate-500 dark:text-slate-400">{advancedProgress ? `${advancedProgress.phase}: ${advancedProgress.message}` : advancedMessage}</p>
           </div>
           {advancedResult && <ReportView result={advancedResult} />}
