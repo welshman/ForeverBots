@@ -8,6 +8,7 @@ export class SimulationRunner {
   private worker: Worker | null = null;
   private timeoutHandle: number | null = null;
   private activeJobId: string | null = null;
+  private pendingCancel: (() => void) | null = null;
 
   private ensureWorker(): Worker {
     if (!this.worker) {
@@ -44,10 +45,13 @@ export class SimulationRunner {
       this.timeoutHandle = null;
     }
     this.activeJobId = null;
+    const resolveCancelled = this.pendingCancel;
+    this.pendingCancel = null;
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
     }
+    resolveCancelled?.();
   }
 
   public run(
@@ -65,8 +69,11 @@ export class SimulationRunner {
     const worker = this.ensureWorker();
 
     return new Promise((resolve) => {
+      this.pendingCancel = () => resolve(this.cancelledResult(request));
+
       this.timeoutHandle = window.setTimeout(() => {
         const wasActive = this.activeJobId === request.jobId;
+        this.pendingCancel = null;
         this.cancel();
         resolve({
           jobId: request.jobId,
@@ -97,6 +104,7 @@ export class SimulationRunner {
           if (this.timeoutHandle) window.clearTimeout(this.timeoutHandle);
           this.timeoutHandle = null;
           this.activeJobId = null;
+          this.pendingCancel = null;
           resolve(msg.payload as SimulationResult);
         }
       };
@@ -106,6 +114,7 @@ export class SimulationRunner {
         if (this.timeoutHandle) window.clearTimeout(this.timeoutHandle);
         this.timeoutHandle = null;
         this.activeJobId = null;
+        this.pendingCancel = null;
         this.cancel();
         resolve({
           jobId: request.jobId,
