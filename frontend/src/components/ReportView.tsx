@@ -94,12 +94,8 @@ export default function ReportView({ result }: { result: SimulationResult }) {
   }, [details, auraFilter]);
 
   const toggleSort = (col: ActionSort) => {
-    if (sortBy === col) {
-      setSortDesc((d) => !d);
-    } else {
-      setSortBy(col);
-      setSortDesc(true);
-    }
+    if (sortBy === col) setSortDesc(d => !d);
+    else { setSortBy(col); setSortDesc(true); }
   };
 
   const sortArrow = (col: ActionSort) => (sortBy === col ? (sortDesc ? " ↓" : " ↑") : "");
@@ -112,10 +108,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
       `Fight: ${details?.duration ? `${details.duration.toFixed(1)}s` : "—"} | Iterations: ${details?.iterations || "—"}`,
       top ? `Top Abilities: ${top}` : "",
     ].filter(Boolean).join("\n");
-    navigator.clipboard?.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
   const downloadJson = () => {
@@ -155,29 +148,18 @@ export default function ReportView({ result }: { result: SimulationResult }) {
     const lines = [
       "| Ability | Share | DPS | Casts | Crit % |",
       "| --- | ---: | ---: | ---: | ---: |",
-      ...sortedActions.map(
-        (a) =>
-          `| ${a.name} | ${(100 * a.damage / (details.total || 1)).toFixed(1)}% | ${formatDps(a.dps)} | ${a.casts.toFixed(1)} | ${a.crit !== undefined ? `${a.crit.toFixed(1)}%` : "—"} |`
-      ),
+      ...sortedActions.map((a) => `| ${a.name} | ${(100 * a.damage / (details.total || 1)).toFixed(1)}% | ${formatDps(a.dps)} | ${a.casts.toFixed(1)} | ${a.crit !== undefined ? `${a.crit.toFixed(1)}%` : "—"} |`),
     ];
-    navigator.clipboard?.writeText(lines.join("\n")).then(() => {
-      setCopiedMd(true);
-      setTimeout(() => setCopiedMd(false), 2000);
-    });
+    navigator.clipboard?.writeText(lines.join("\n")).then(() => { setCopiedMd(true); setTimeout(() => setCopiedMd(false), 2000); });
   };
 
   const minDps = result.statistics.min;
   const maxDps = result.statistics.max;
-  const meanPos =
-    minDps !== undefined && maxDps !== undefined && result.dps !== undefined && maxDps > minDps
-      ? Math.max(0, Math.min(100, ((result.dps - minDps) / (maxDps - minDps)) * 100))
-      : null;
+  const meanPos = minDps !== undefined && maxDps !== undefined && result.dps !== undefined && maxDps > minDps ? Math.max(0, Math.min(100, ((result.dps - minDps) / (maxDps - minDps)) * 100)) : null;
 
-  const failureTitle = result.errors.some((error) => error.code.toUpperCase().includes("CANCEL"))
-    ? "Simulation Cancelled"
-    : "Simulation Refused or Failed";
+  const failureTitle = result.errors.some((error) => error.code.toUpperCase().includes("CANCEL")) ? "Simulation Cancelled" : "Simulation Refused or Failed";
 
-  return <div className="space-y-6">
+  return <div className="space-y-6 print:space-y-4">
     {!result.ok ? <section className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 text-rose-400"><h3>{failureTitle}</h3>{result.errors.map((e,i) => <p key={i}>[{e.code}] {e.message}</p>)}</section> : <>
       <section className={panel}>
         <div className="flex flex-wrap justify-between items-start gap-4">
@@ -207,20 +189,9 @@ export default function ReportView({ result }: { result: SimulationResult }) {
             <p className="text-sm text-slate-300">Iterations: {details?.iterations || "Unavailable"} | Average duration: {details?.duration ? `${details.duration.toFixed(1)}s` : "Unavailable"} | Processing time: {result.durationMs}ms | Engine: {result.engineVersion}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={downloadJson}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
-            >
-              Download JSON
-            </button>
-            <button
-              type="button"
-              onClick={copySummary}
-              className="text-xs px-3 py-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors"
-            >
-              {copied ? "Copied!" : "Copy Summary"}
-            </button>
+            <button type="button" onClick={() => window.print()} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors">Print Report</button>
+            <button type="button" onClick={downloadJson} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors">Download JSON</button>
+            <button type="button" onClick={copySummary} className="text-xs px-3 py-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors">{copied ? "Copied!" : "Copy Summary"}</button>
           </div>
         </div>
       </section>
@@ -229,20 +200,8 @@ export default function ReportView({ result }: { result: SimulationResult }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold">Damage Breakdown</h3>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={copyMarkdownTable}
-              className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
-            >
-              {copiedMd ? "Copied MD!" : "Copy Markdown"}
-            </button>
-            <button
-              type="button"
-              onClick={exportCsv}
-              className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors"
-            >
-              Export CSV
-            </button>
+            <button type="button" onClick={copyMarkdownTable} className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors">{copiedMd ? "Copied MD!" : "Copy Markdown"}</button>
+            <button type="button" onClick={exportCsv} className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-gold-500/40 hover:text-gold-400 transition-colors">Export CSV</button>
           </div>
         </div>
         <table className="w-full text-sm"><thead><tr className="text-slate-400">
@@ -260,18 +219,7 @@ export default function ReportView({ result }: { result: SimulationResult }) {
           <h3 className="font-semibold">Buff &amp; Debuff Uptime</h3>
           <div className="flex items-center gap-1">
             {(["All", "Buff", "Debuff"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setAuraFilter(tab)}
-                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
-                  auraFilter === tab
-                    ? "border-gold-500/60 bg-gold-500/15 text-gold-400"
-                    : "border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-gold-500/40"
-                }`}
-              >
-                {tab}
-              </button>
+              <button key={tab} type="button" onClick={() => setAuraFilter(tab)} className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${auraFilter === tab ? "border-gold-500/60 bg-gold-500/15 text-gold-400" : "border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-gold-500/40"}`}>{tab}</button>
             ))}
           </div>
         </div>

@@ -37,7 +37,6 @@ export default function HomePage() {
         <h1 className="text-3xl sm:text-4xl font-bold text-gold-400">Simulate. Optimize. Master WoW Forever.</h1>
         <p className="max-w-2xl mx-auto text-sm text-slate-500 dark:text-slate-400">Free, client-side combat simulation for World of Warcraft: Forever, powered by the MythicSim Forever engine running entirely in your browser.</p>
       </section>
-
       <section aria-label="Site features" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
           { title: "Sim", desc: "Run a fast Patchwerk single-target simulation with configurable fight length and iterations.", href: "/sim" },
@@ -50,7 +49,6 @@ export default function HomePage() {
           </Link>
         ))}
       </section>
-
       <section aria-labelledby="site-updates-heading" className={`${panel} space-y-4`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -59,7 +57,7 @@ export default function HomePage() {
           </div>
           <a href={historyUrl} target="_blank" rel="noreferrer" className="text-sm text-gold-400 hover:underline">View all updates</a>
         </div>
-        {status === "loading" && <p role="status" className="text-sm text-slate-500 dark:text-slate-400">Loading recent updates…</p>}
+        {status === "loading" && <div className="space-y-2" aria-label="Loading updates">{[0,1,2].map(i => <div key={i} className="h-4 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" style={{ width: `${90 - i * 15}%` }} />)}</div>}
         {status === "error" && <p role="status" className="text-sm text-slate-500 dark:text-slate-400">Recent updates could not be loaded. You can still view the full history on GitHub using the link above.</p>}
         {status === "ready" && updates.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">No recent updates available.</p>}
         {status === "ready" && updates.length > 0 && <ul className="divide-y divide-slate-200 dark:divide-slate-800">
