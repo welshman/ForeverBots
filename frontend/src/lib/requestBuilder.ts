@@ -1,48 +1,18 @@
 import { ParsedSimcProfile, SimulationOptions } from "../types/simulation";
 
 const CLASS_ENUM: Record<string, string> = {
-  druid: "ClassDruid",
-  hunter: "ClassHunter",
-  mage: "ClassMage",
-  paladin: "ClassPaladin",
-  priest: "ClassPriest",
-  rogue: "ClassRogue",
-  shaman: "ClassShaman",
-  warlock: "ClassWarlock",
-  warrior: "ClassWarrior",
+  druid: "ClassDruid", hunter: "ClassHunter", mage: "ClassMage", paladin: "ClassPaladin",
+  priest: "ClassPriest", rogue: "ClassRogue", shaman: "ClassShaman", warlock: "ClassWarlock", warrior: "ClassWarrior",
 };
 
 const RACE_ENUM: Record<string, string> = {
-  human: "RaceHuman",
-  orc: "RaceOrc",
-  dwarf: "RaceDwarf",
-  night_elf: "RaceNightElf",
-  nightelf: "RaceNightElf",
-  undead: "RaceUndead",
-  scourge: "RaceUndead",
-  tauren: "RaceTauren",
-  gnome: "RaceGnome",
-  troll: "RaceTroll",
+  human: "RaceHuman", orc: "RaceOrc", dwarf: "RaceDwarf", night_elf: "RaceNightElf", nightelf: "RaceNightElf",
+  undead: "RaceUndead", scourge: "RaceUndead", tauren: "RaceTauren", gnome: "RaceGnome", troll: "RaceTroll",
 };
 
 const SLOT_ORDER = [
-  "head",
-  "neck",
-  "shoulder",
-  "back",
-  "chest",
-  "wrist",
-  "hands",
-  "waist",
-  "legs",
-  "feet",
-  "finger1",
-  "finger2",
-  "trinket1",
-  "trinket2",
-  "main_hand",
-  "off_hand",
-  "ranged",
+  "head", "neck", "shoulder", "back", "chest", "wrist", "hands", "waist", "legs", "feet",
+  "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand", "ranged",
 ] as const;
 
 function clampInt(value: number, minimum: number, maximum: number, fallback: number): number {
@@ -62,137 +32,58 @@ function dotRefreshAction(spellId: number) {
   return {
     action: {
       castSpell: { spellId: { spellId } },
-      condition: {
-        not: { val: { dotIsActive: { spellId: { spellId } } } },
-      },
+      condition: { not: { val: { dotIsActive: { spellId: { spellId } } } } },
     },
   };
 }
 
-function buildDefaultRotation(lowerClass: string): Array<Record<string, unknown>> {
-  const base: Array<Record<string, unknown>> = [
-    { action: { autocastOtherCooldowns: {} } },
-  ];
+export type RotationOverride = Array<Record<string, unknown>>;
 
+export function buildDefaultRotation(lowerClass: string): Array<Record<string, unknown>> {
+  const base: Array<Record<string, unknown>> = [{ action: { autocastOtherCooldowns: {} } }];
   switch (lowerClass) {
     case "warlock":
-      return [
-        ...base,
-        {
-          action: {
-            castSpell: { spellId: { spellId: 11689 } }, // Life Tap
-            condition: {
-              cmp: {
-                lhs: { currentManaPercent: {} },
-                op: "OpLt",
-                rhs: { const: { val: "20%" } },
-              },
-            },
-          },
-        },
-        dotRefreshAction(11713), // Curse of Agony
-        dotRefreshAction(25311), // Corruption
-        dotRefreshAction(25309), // Immolate
-        { action: { castSpell: { spellId: { spellId: 25307 } } } }, // Shadow Bolt
-      ];
+      return [...base,
+        { action: { castSpell: { spellId: { spellId: 11689 } }, condition: { cmp: { lhs: { currentManaPercent: {} }, op: "OpLt", rhs: { const: { val: "20%" } } } } } },
+        dotRefreshAction(11713), dotRefreshAction(25311), dotRefreshAction(25309),
+        { action: { castSpell: { spellId: { spellId: 25307 } } } }];
     case "mage":
-      return [
-        ...base,
-        {
-          action: {
-            castSpell: { spellId: { spellId: 12051 } }, // Evocation
-            condition: {
-              cmp: {
-                lhs: { currentManaPercent: {} },
-                op: "OpLt",
-                rhs: { const: { val: "15%" } },
-              },
-            },
-          },
-        },
-        { action: { castSpell: { spellId: { spellId: 10199 } } } }, // Fire Blast
-        { action: { castSpell: { spellId: { spellId: 25304 } } } }, // Frostbolt
-      ];
+      return [...base,
+        { action: { castSpell: { spellId: { spellId: 12051 } }, condition: { cmp: { lhs: { currentManaPercent: {} }, op: "OpLt", rhs: { const: { val: "15%" } } } } } },
+        { action: { castSpell: { spellId: { spellId: 10199 } } } },
+        { action: { castSpell: { spellId: { spellId: 25304 } } } }];
     case "priest":
-      return [
-        ...base,
-        dotRefreshAction(10942), // Shadow Word: Pain
-        { action: { castSpell: { spellId: { spellId: 10947 } } } }, // Mind Blast
-      ];
+      return [...base, dotRefreshAction(10942), { action: { castSpell: { spellId: { spellId: 10947 } } } }];
     case "druid":
-      return [
-        ...base,
-        dotRefreshAction(9835), // Moonfire
-        { action: { castSpell: { spellId: { spellId: 25298 } } } }, // Starfire
-      ];
+      return [...base, dotRefreshAction(9835), { action: { castSpell: { spellId: { spellId: 25298 } } } }];
     case "shaman":
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 15208 } } } }, // Lightning Bolt
-      ];
+      return [...base, { action: { castSpell: { spellId: { spellId: 15208 } } } }];
     case "hunter":
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 20904 } } } }, // Aimed Shot
-        { action: { castSpell: { spellId: { spellId: 14290 } } } }, // Multi-Shot
-      ];
+      return [...base, { action: { castSpell: { spellId: { spellId: 20904 } } } }, { action: { castSpell: { spellId: { spellId: 14290 } } } }];
     case "paladin":
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 20271 } } } }, // Judgement
-      ];
+      return [...base, { action: { castSpell: { spellId: { spellId: 20271 } } } }];
     case "rogue":
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 11294 } } } }, // Sinister Strike
-      ];
+      return [...base, { action: { castSpell: { spellId: { spellId: 11294 } } } }];
     case "warrior":
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 23894 } } } }, // Bloodthirst
-        { action: { castSpell: { spellId: { spellId: 1680 } } } }, // Whirlwind
-        { action: { castSpell: { spellId: { spellId: 25286 } } } }, // Heroic Strike
-      ];
+      return [...base,
+        { action: { castSpell: { spellId: { spellId: 23894 } } } },
+        { action: { castSpell: { spellId: { spellId: 1680 } } } },
+        { action: { castSpell: { spellId: { spellId: 25286 } } } }];
     default:
-      return [
-        ...base,
-        { action: { castSpell: { spellId: { spellId: 25304 } } } },
-      ];
+      return [...base, { action: { castSpell: { spellId: { spellId: 25304 } } } }];
   }
 }
 
 const DEFAULT_CLASS_OPTIONS: Record<string, Record<string, unknown>> = {
-  mage: {
-    mage: { options: { classOptions: { defaultMageArmor: "MageArmorMageArmor" } } },
-  },
-  warlock: {
-    warlock: { options: { classOptions: { armor: "DemonArmor", summon: "Imp" } } },
-  },
-  warrior: {
-    warrior: { options: { classOptions: { startingRage: 0 } } },
-  },
-  rogue: {
-    rogue: { options: { classOptions: {} } },
-  },
-  hunter: {
-    hunter: {
-      options: {
-        classOptions: { ammo: "ThoriumHeadedArrow", petType: "Cat", petUptime: 1 },
-      },
-    },
-  },
-  priest: {
-    priest: { options: { classOptions: {} } },
-  },
-  paladin: {
-    paladin: { options: { classOptions: {} } },
-  },
-  druid: {
-    druid: { options: { classOptions: {} } },
-  },
-  shaman: {
-    shaman: { options: { classOptions: {} } },
-  },
+  mage: { mage: { options: { classOptions: { defaultMageArmor: "MageArmorMageArmor" } } } },
+  warlock: { warlock: { options: { classOptions: { armor: "DemonArmor", summon: "Imp" } } } },
+  warrior: { warrior: { options: { classOptions: { startingRage: 0 } } } },
+  rogue: { rogue: { options: { classOptions: {} } } },
+  hunter: { hunter: { options: { classOptions: { ammo: "ThoriumHeadedArrow", petType: "Cat", petUptime: 1 } } } },
+  priest: { priest: { options: { classOptions: {} } } },
+  paladin: { paladin: { options: { classOptions: {} } } },
+  druid: { druid: { options: { classOptions: {} } } },
+  shaman: { shaman: { options: { classOptions: {} } } },
 };
 
 export interface GearOverride {
@@ -204,14 +95,11 @@ export interface GearOverride {
 export function buildForeverRequestJson(
   profile: ParsedSimcProfile,
   options: SimulationOptions,
-  overrides: GearOverride[] = []
+  overrides: GearOverride[] = [],
+  rotationOverride?: RotationOverride
 ): string {
-  if (!profile) {
-    throw new Error("A parsed character profile is required to build a simulation request.");
-  }
-  if (!profile.className || typeof profile.className !== "string") {
-    throw new Error("The imported profile is missing a character class.");
-  }
+  if (!profile) throw new Error("A parsed character profile is required to build a simulation request.");
+  if (!profile.className || typeof profile.className !== "string") throw new Error("The imported profile is missing a character class.");
 
   const lowerClass = profile.className.toLowerCase();
   const classEnum = CLASS_ENUM[lowerClass] ?? "ClassMage";
@@ -219,25 +107,13 @@ export function buildForeverRequestJson(
 
   const slotMap = new Map<string, { id?: number; enchant?: number }>();
   for (const item of profile.gear) {
-    const normalizedSlot =
-      item.slot === "shoulders"
-        ? "shoulder"
-        : item.slot === "wrists"
-        ? "wrist"
-        : item.slot;
+    const normalizedSlot = item.slot === "shoulders" ? "shoulder" : item.slot === "wrists" ? "wrist" : item.slot;
     const itemId = sanitizeItemId(item.itemId);
-    if (itemId) {
-      slotMap.set(normalizedSlot, {
-        id: itemId,
-        enchant: item.enchantId,
-      });
-    }
+    if (itemId) slotMap.set(normalizedSlot, { id: itemId, enchant: item.enchantId });
   }
   for (const ov of overrides) {
     const itemId = sanitizeItemId(ov.itemId);
-    if (itemId) {
-      slotMap.set(ov.slot, { id: itemId, enchant: ov.enchantId });
-    }
+    if (itemId) slotMap.set(ov.slot, { id: itemId, enchant: ov.enchantId });
   }
 
   const items = SLOT_ORDER.map((slot) => {
@@ -252,10 +128,7 @@ export function buildForeverRequestJson(
   const iterations = clampInt(options.iterations, 1, 10_000, 500);
   const targetCount = clampInt(options.targetCount, 1, 5, 1);
   const seed = sanitizeSeed(options.seed);
-  const durationVariation = Math.max(
-    0,
-    Math.min(120, Math.round((durationSeconds * durationVariancePct) / 100))
-  );
+  const durationVariation = Math.max(0, Math.min(120, Math.round((durationSeconds * durationVariancePct) / 100)));
   const playerLevel = profile.level || 60;
   const targetLevel = playerLevel === 60 ? 63 : Math.min(63, playerLevel + 3);
 
@@ -269,14 +142,12 @@ export function buildForeverRequestJson(
     equipment: { items },
     rotation: {
       type: "TypeAPL",
-      priorityList: buildDefaultRotation(lowerClass),
+      priorityList: rotationOverride ?? buildDefaultRotation(lowerClass),
     },
     ...(DEFAULT_CLASS_OPTIONS[lowerClass] ?? {}),
   };
 
-  if (profile.talents && profile.talents.includes("-")) {
-    player.talentsString = profile.talents;
-  }
+  if (profile.talents && profile.talents.includes("-")) player.talentsString = profile.talents;
 
   if (playerLevel < 60 && profile.characterSheet) {
     player.characterSheet = {
@@ -286,12 +157,9 @@ export function buildForeverRequestJson(
       mana: profile.characterSheet.mana,
       meleeCrit: profile.characterSheet.meleeCrit,
       spellCrit: [
-        profile.characterSheet.spellCrit,
-        profile.characterSheet.spellCrit,
-        profile.characterSheet.spellCrit,
-        profile.characterSheet.spellCrit,
-        profile.characterSheet.spellCrit,
-        profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit, profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit, profile.characterSheet.spellCrit,
+        profile.characterSheet.spellCrit, profile.characterSheet.spellCrit,
       ],
     };
   }
@@ -300,34 +168,16 @@ export function buildForeverRequestJson(
     encounter: {
       duration: durationSeconds,
       durationVariation,
-      executeProportion20: 0.2,
-      executeProportion25: 0.25,
-      executeProportion35: 0.35,
-      executeProportion45: 0.45,
-      executeProportion90: 0.9,
+      executeProportion20: 0.2, executeProportion25: 0.25, executeProportion35: 0.35,
+      executeProportion45: 0.45, executeProportion90: 0.9,
       targets: Array.from({ length: targetCount }, (_, i) => ({
-        id: 213336 + i,
-        name: `Target ${i + 1}`,
-        level: targetLevel,
-        canCrush: true,
-        parryHaste: true,
-        minBaseDamage: 3000,
-        damageSpread: 0.3333,
-        swingSpeed: 2,
-        stats: [
-          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 805, 0, 0,
-          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3731, 0, 127393, 0, 0, 0, 0, 0, 0, 0,
-        ],
+        id: 213336 + i, name: `Target ${i + 1}`, level: targetLevel, canCrush: true, parryHaste: true,
+        minBaseDamage: 3000, damageSpread: 0.3333, swingSpeed: 2,
+        stats: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 805, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3731, 0, 127393, 0, 0, 0, 0, 0, 0, 0],
       })),
     },
-    raid: {
-      parties: [{ players: [player] }],
-    },
-    simOptions: {
-      debugFirstIteration: true,
-      iterations,
-      randomSeed: String(seed),
-    },
+    raid: { parties: [{ players: [player] }] },
+    simOptions: { debugFirstIteration: true, iterations, randomSeed: String(seed) },
   };
 
   return JSON.stringify(request, null, 2);
