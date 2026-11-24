@@ -29,6 +29,11 @@ export interface PreflightIssue {
   message: string;
 }
 
+export function formatDps(value: number | undefined | null): string {
+  if (value === undefined || value === null || !Number.isFinite(value) || value < 0) return "—";
+  return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
 export function computeConfidenceInterval(
   mean: number,
   stdDev: number | undefined,
@@ -61,12 +66,12 @@ export function summarizeResult(result: SimulationResult, iterations: number): R
   const warnings: string[] = [];
 
   const headline = Number.isFinite(mean)
-    ? `Mean DPS is ${mean.toLocaleString(undefined, { maximumFractionDigits: 1 })}`
+    ? `Mean DPS is ${formatDps(mean)}`
     : "Simulation completed without a numeric DPS headline";
 
   if (ci) {
     notes.push(
-      `95% confidence interval: ${ci.low.toLocaleString(undefined, { maximumFractionDigits: 1 })} – ${ci.high.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS (±${ci.margin.toFixed(1)} DPS, ±${ci.relativeHalfWidthPct.toFixed(2)}%).`
+      `95% confidence interval: ${formatDps(ci.low)} – ${formatDps(ci.high)} DPS (±${formatDps(ci.margin)} DPS, ±${ci.relativeHalfWidthPct.toFixed(2)}%).`
     );
     if (ci.stability === "stable") {
       notes.push("Results are statistically stable for comparing small gear or talent changes.");
@@ -81,7 +86,7 @@ export function summarizeResult(result: SimulationResult, iterations: number): R
 
   if (result.statistics.min !== undefined && result.statistics.max !== undefined) {
     notes.push(
-      `Observed range across iterations: ${result.statistics.min.toLocaleString(undefined, { maximumFractionDigits: 1 })} to ${result.statistics.max.toLocaleString(undefined, { maximumFractionDigits: 1 })} DPS.`
+      `Observed range across iterations: ${formatDps(result.statistics.min)} to ${formatDps(result.statistics.max)} DPS.`
     );
   }
 
@@ -120,10 +125,14 @@ export function compareResults(
         deltaPct,
         verdict: "within-noise",
         label: "Within simulation noise",
-        explanation: `The ${deltaDps >= 0 ? "+" : ""}${deltaDps.toFixed(1)} DPS (${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(2)}%) difference is smaller than the 95% combined margin of error (±${threshold.toFixed(1)} DPS).`,
+        explanation: `The ${deltaDps >= 0 ? "+" : ""}${formatDps(deltaDps)} DPS (${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(2)}%) difference is smaller than the 95% combined margin of error (±${formatDps(threshold)} DPS).`,
       };
     }
   }
+
+  const significanceNote = baseSd === undefined || candSd === undefined
+    ? " Statistical significance could not be assessed because one or both runs lack standard deviation data."
+    : "";
 
   if (deltaDps > 0) {
     return {
@@ -131,7 +140,7 @@ export function compareResults(
       deltaPct,
       verdict: "clear-upgrade",
       label: "Clear upgrade",
-      explanation: `Current run is +${deltaDps.toFixed(1)} DPS (+${deltaPct.toFixed(2)}%) higher than the baseline run.`,
+      explanation: `Current run is +${formatDps(deltaDps)} DPS (+${deltaPct.toFixed(2)}%) higher than the baseline run.${significanceNote}`,
     };
   }
   return {
@@ -139,7 +148,7 @@ export function compareResults(
     deltaPct,
     verdict: "clear-downgrade",
     label: "Clear downgrade",
-    explanation: `Current run is ${deltaDps.toFixed(1)} DPS (${deltaPct.toFixed(2)}%) lower than the baseline run.`,
+    explanation: `Current run is ${formatDps(deltaDps)} DPS (${deltaPct.toFixed(2)}%) lower than the baseline run.${significanceNote}`,
   };
 }
 
@@ -185,11 +194,11 @@ export function exportResultToMarkdown(result: SimulationResult, iterations: num
   const rows = [
     "| Metric | Value |",
     "|---|---|",
-    `| Mean DPS | ${mean.toLocaleString(undefined, { maximumFractionDigits: 1 })} |`,
-    ...(ci ? [`| 95% CI | ${ci.low.toFixed(1)} – ${ci.high.toFixed(1)} (±${ci.margin.toFixed(1)}) |`] : []),
-    ...(result.statistics.min !== undefined ? [`| Min DPS | ${result.statistics.min.toFixed(1)} |`] : []),
-    ...(result.statistics.max !== undefined ? [`| Max DPS | ${result.statistics.max.toFixed(1)} |`] : []),
-    ...(result.statistics.stdDev !== undefined ? [`| Std Dev | ${result.statistics.stdDev.toFixed(1)} |`] : []),
+    `| Mean DPS | ${formatDps(mean)} |`,
+    ...(ci ? [`| 95% CI | ${formatDps(ci.low)} – ${formatDps(ci.high)} (±${formatDps(ci.margin)}) |`] : []),
+    ...(result.statistics.min !== undefined ? [`| Min DPS | ${formatDps(result.statistics.min)} |`] : []),
+    ...(result.statistics.max !== undefined ? [`| Max DPS | ${formatDps(result.statistics.max)} |`] : []),
+    ...(result.statistics.stdDev !== undefined ? [`| Std Dev | ${formatDps(result.statistics.stdDev)} |`] : []),
     `| Engine | ${result.engineVersion} |`,
     `| Runtime | ${result.durationMs} ms |`,
   ];
